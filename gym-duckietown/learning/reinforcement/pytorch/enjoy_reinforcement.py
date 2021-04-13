@@ -12,7 +12,7 @@ from utils.wrappers import NormalizeWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
 
 
-def _enjoy():          
+def _enjoy():
     # Launch the env with our helper function
     env = launch_env()
     print("Initialized environment")
@@ -27,7 +27,7 @@ def _enjoy():
 
     state_dim = env.observation_space.shape
     action_dim = env.action_space.shape[0]
-    max_action = float(env.action_space.high[0])
+    max_action = float(env.action_space.high[0]) * 0.8
 
     # Initialize policy
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
@@ -37,13 +37,17 @@ def _enjoy():
     done = False
 
     while True:
+        total_reward = 0
         while not done:
             action = policy.predict(np.array(obs))
+            print(action)
             # Perform action
             obs, reward, done, _ = env.step(action)
+            total_reward += reward
             env.render()
         done = False
-        obs = env.reset()        
+        print(reward)
+        obs = env.reset()
 
 if __name__ == '__main__':
     _enjoy()

@@ -86,9 +86,9 @@ def update(dt):
     if key_handler[key.DOWN]:
         action = np.array([-0.44, 0])
     if key_handler[key.LEFT]:
-        action = np.array([0.35, +1])
+        action = np.array([1, +1])
     if key_handler[key.RIGHT]:
-        action = np.array([0.35, -1])
+        action = np.array([0.8, -1])
     if key_handler[key.SPACE]:
         action = np.array([0, 0])
 
@@ -97,6 +97,7 @@ def update(dt):
         action *= 1.5
 
     obs, reward, done, info = env.step(action)
+    print(obs)
     print('step_count = %s, reward=%.3f' % (env.unwrapped.step_count, reward))
 
     if key_handler[key.RETURN]:

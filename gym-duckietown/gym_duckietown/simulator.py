@@ -277,7 +277,7 @@ class Simulator(gym.Env):
         # Array to render the image into (for human rendering)
         self.img_array_human = np.zeros(shape=(WINDOW_HEIGHT, WINDOW_WIDTH, 3), dtype=np.uint8)
 
-        
+
 
         # allowed angle in lane for starting position
         self.accept_start_angle_deg = accept_start_angle_deg
@@ -310,7 +310,7 @@ class Simulator(gym.Env):
 
         self.last_action = np.array([0, 0])
         self.wheelVels = np.array([0, 0])
-        
+
     def _init_vlists(self):
         import pyglet
         # Create the vertex list for our road quad
@@ -950,7 +950,7 @@ class Simulator(gym.Env):
         # Rotate and align each curve with its place in global frame
         if kind.startswith('4way'):
             fourway_pts = []
-            # Generate all four sides' curves, 
+            # Generate all four sides' curves,
             # with 3-points template above
             for rot in np.arange(0, 4):
                 mat = gen_rot_matrix(np.array([0, 1, 0]), rot * math.pi / 2)
@@ -1294,7 +1294,6 @@ class Simulator(gym.Env):
         # cp = [gx, (grid_height - 1) * tile_size - gz]
         cp = [gx, grid_height * tile_size - gz]
 
-
         return geometry.SE2_from_translation_angle(cp, angle)
 
     def weird_from_cartesian(self, q: np.ndarray) -> Tuple[list, float]:
@@ -1323,11 +1322,13 @@ class Simulator(gym.Env):
         else:
 
             # Compute the reward
-            reward = (
-                    +1.0 * speed * lp.dot_dir +
-                    -10 * np.abs(lp.dist) +
-                    +40 * col_penalty
-            )
+            # reward = (
+            #         +1.0 * speed * lp.dot_dir +
+            #         -10 * np.abs(lp.dist) +
+            #         +40 * col_penalty
+            # )
+
+            reward = 10 * speed * lp.dot_dir - 100 * np.abs(lp.dist) + 400 * col_penalty
 
         dist_to_stop = 1000.0
         #print("number of objects = ", len(self.objects))
@@ -1343,11 +1344,11 @@ class Simulator(gym.Env):
         action = np.clip(action, -1, 1)
         # Actions could be a Python list
         action = np.array(action)
-        
+
         frame_skip = self.frame_skip
         if self.domain_rand:
             frame_skip = self.randomization_settings["frame_skip"]
-        
+
         for _ in range(int(frame_skip)):
             self.update_physics(action)
 
@@ -1426,7 +1427,7 @@ class Simulator(gym.Env):
         logger.info('Pos: %s angle %s' % (self.cur_pos, self.cur_angle))
         if self.domain_rand:
             pos = pos + self.randomization_settings['camera_noise']
-            
+
         x, y, z = pos + self.cam_offset
         dx, dy, dz = get_dir_vec(angle)
         gl.glMatrixMode(gl.GL_MODELVIEW)

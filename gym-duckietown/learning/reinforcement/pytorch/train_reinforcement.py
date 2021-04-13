@@ -4,6 +4,10 @@ import logging
 
 import os
 import numpy as np
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
 
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
@@ -11,16 +15,19 @@ from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer
 from utils.env import launch_env
 from utils.wrappers import NormalizeWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter('runs/ddpg')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+SEQUENCE_LENGTH = 5
 
-def _train(args):   
+def _train(args):
     if not os.path.exists("./results"):
         os.makedirs("./results")
     if not os.path.exists(args.model_dir):
         os.makedirs(args.model_dir)
-        
+
     # Launch the env with our helper function
     env = launch_env()
     print("Initialized environment")
@@ -32,11 +39,11 @@ def _train(args):
     env = ActionWrapper(env)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
-    
+
     # Set seeds
     seed(args.seed)
-
-    state_dim = env.observation_space.shape
+    obs_dim = env.observation_space.shape
+    state_dim = np.array([obs_dim[0], obs_dim[1], obs_dim[2]*SEQUENCE_LENGTH])
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
 
@@ -44,10 +51,11 @@ def _train(args):
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
     replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
     print("Initialized DDPG")
-    
+
     # Evaluate untrained policy
-    evaluations= [evaluate_policy(env, policy)]
-   
+    # evaluations= [evaluate_policy(env, policy)]
+    evaluations = []
+
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
@@ -56,18 +64,21 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
-    
+    misc = {}
+    action = []
+
     print("Starting training")
     while total_timesteps < args.max_timesteps:
-        
-        print("timestep: {} | reward: {}".format(total_timesteps, reward))
-            
+
+        print("timestep: {} | action: {} | reward: {}".format(total_timesteps, action, reward))
+
         if done:
             if total_timesteps != 0:
+                print(misc['Simulator']['msg'])
                 print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
                     total_timesteps, episode_num, episode_timesteps, episode_reward))
                 policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
-
+                writer.add_scalar('reward', episode_reward/10000, episode_num)
                 # Evaluate episode
                 if timesteps_since_eval >= args.eval_freq:
                     timesteps_since_eval %= args.eval_freq
@@ -77,6 +88,7 @@ def _train(args):
                     if args.save_models:
                         policy.save(filename='ddpg', directory=args.model_dir)
                     np.savez("./results/rewards.npz",evaluations)
+
 
             # Reset environment
             env_counter += 1
@@ -89,6 +101,7 @@ def _train(args):
         # Select action randomly or according to policy
         if total_timesteps < args.start_timesteps:
             action = env.action_space.sample()
+            action[0] = (action[0] + 1) / 2
         else:
             action = policy.predict(np.array(obs))
             if args.expl_noise != 0:
@@ -99,30 +112,43 @@ def _train(args):
                           ).clip(env.action_space.low, env.action_space.high)
 
         # Perform action
-        new_obs, reward, done, _ = env.step(action)
+        new_obs, reward, done, misc = env.step(action)
+        if action[0] < 0.001:   #Penalise slow actions: helps the bot to figure out that going straight > turning in circles
+            reward = -40
 
         if episode_timesteps >= args.env_timesteps:
             done = True
 
         done_bool = 0 if episode_timesteps + 1 == args.env_timesteps else float(done)
         episode_reward += reward
-
+        # from PIL import Image
+        # obs = np.array(Image.fromarray(obs).resize((np.shape(obs)[0], int(np.shape(obs)[1]/2), int(np.shape(obs)[2]/2))))
+        # new_obs = np.array(Image.fromarray(new_obs).resize((int(np.shape(obs)[0]/2), int(np.shape(obs)[1]/2))))
+        if episode_timesteps == 0:
+            seq = [obs for _ in range(SEQUENCE_LENGTH)]
+            obs_seq = np.concatenate(seq)
+        else:
+            obs_seq = np.concatenate((obs_seq[3:], obs))
         # Store data in replay buffer
-        replay_buffer.add(obs, new_obs, action, reward, done_bool)
+        new_obs_seq = np.concatenate((obs_seq[3:], new_obs))
+        # print(np.shape(new_obs_seq))
+        assert obs_seq.shape == (15, 80, 60)
+        assert new_obs_seq.shape == (15, 80, 60)
+        replay_buffer.add(obs_seq, new_obs_seq, action, reward, done_bool)
 
         obs = new_obs
 
         episode_timesteps += 1
         total_timesteps += 1
         timesteps_since_eval += 1
-    
+
     print("Training done, about to save..")
     policy.save(filename='ddpg', directory=args.model_dir)
     print("Finished saving..should return now!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    
+
     # DDPG Args
     parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument("--start_timesteps", default=1e4, type=int)  # How many time steps purely random policy is run for

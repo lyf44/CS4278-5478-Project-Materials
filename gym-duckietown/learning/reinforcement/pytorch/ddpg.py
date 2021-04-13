@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+SEQUENCE_LENGTH = 5
 
 # Implementation of Deep Deterministic Policy Gradients (DDPG)
 # Paper: https://arxiv.org/abs/1509.02971
@@ -39,21 +39,24 @@ class ActorCNN(nn.Module):
         super(ActorCNN, self).__init__()
 
         # ONLY TRU IN CASE OF DUCKIETOWN:
-        flat_size = 32 * 9 * 14
+        flat_size = 64 * 7 * 10
 
         self.lr = nn.LeakyReLU()
         self.tanh = nn.Tanh()
         self.sigm = nn.Sigmoid()
 
-        self.conv1 = nn.Conv2d(3, 32, 8, stride=2)
-        self.conv2 = nn.Conv2d(32, 32, 4, stride=2)
-        self.conv3 = nn.Conv2d(32, 32, 4, stride=2)
-        self.conv4 = nn.Conv2d(32, 32, 4, stride=1)
+        self.pool1 = nn.MaxPool2d(2)
+        self.pool2 = nn.MaxPool2d(2)
+        self.pool3 = nn.MaxPool2d(2)
 
-        self.bn1 = nn.BatchNorm2d(32)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.bn4 = nn.BatchNorm2d(32)
+        self.conv1 = nn.Conv2d(15, 32, 3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, 3, stride=1, padding=1)
+
+        # self.bn1 = nn.BatchNorm2d(32)
+        # self.bn2 = nn.BatchNorm2d(32)
+        # self.bn3 = nn.BatchNorm2d(32)
+        # self.bn4 = nn.BatchNorm2d(32)
 
         self.dropout = nn.Dropout(.5)
 
@@ -63,11 +66,15 @@ class ActorCNN(nn.Module):
         self.max_action = max_action
 
     def forward(self, x):
-        x = self.bn1(self.lr(self.conv1(x)))
-        x = self.bn2(self.lr(self.conv2(x)))
-        x = self.bn3(self.lr(self.conv3(x)))
-        x = self.bn4(self.lr(self.conv4(x)))
-        x = x.view(x.size(0), -1)  # flatten
+        x = self.lr(self.pool1(self.conv1(x)))
+        x = self.lr(self.pool2(self.conv2(x)))
+        x = self.lr(self.pool3(self.conv3(x)))
+        # print(x.shape)
+        # print(x.size(0))
+        # x = x.view(x.size(0), -1)  # flatten
+        # print(x.shape)
+        x = x.reshape(x.shape[0], -1)
+        # print(x.shape)
         x = self.dropout(x)
         x = self.lr(self.lin1(x))
 
@@ -104,19 +111,23 @@ class CriticCNN(nn.Module):
     def __init__(self, action_dim):
         super(CriticCNN, self).__init__()
 
-        flat_size = 32 * 9 * 14
+        flat_size = 64 * 7 * 10
 
         self.lr = nn.LeakyReLU()
+        # self.relu = nn.ReLU()
 
-        self.conv1 = nn.Conv2d(3, 32, 8, stride=2)
-        self.conv2 = nn.Conv2d(32, 32, 4, stride=2)
-        self.conv3 = nn.Conv2d(32, 32, 4, stride=2)
-        self.conv4 = nn.Conv2d(32, 32, 4, stride=1)
+        self.pool1 = nn.MaxPool2d(2)
+        self.pool2 = nn.MaxPool2d(2)
+        self.pool3 = nn.MaxPool2d(2)
 
-        self.bn1 = nn.BatchNorm2d(32)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.bn4 = nn.BatchNorm2d(32)
+        self.conv1 = nn.Conv2d(15, 32, 3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, 3, stride=1, padding=1)
+
+        # self.bn1 = nn.BatchNorm2d(32)
+        # self.bn2 = nn.BatchNorm2d(32)
+        # self.bn3 = nn.BatchNorm2d(32)
+        # self.bn4 = nn.BatchNorm2d(32)
 
         self.dropout = nn.Dropout(.5)
 
@@ -125,11 +136,12 @@ class CriticCNN(nn.Module):
         self.lin3 = nn.Linear(128, 1)
 
     def forward(self, states, actions):
-        x = self.bn1(self.lr(self.conv1(states)))
-        x = self.bn2(self.lr(self.conv2(x)))
-        x = self.bn3(self.lr(self.conv3(x)))
-        x = self.bn4(self.lr(self.conv4(x)))
-        x = x.view(x.size(0), -1)  # flatten
+        x = self.lr(self.pool1(self.conv1(states)))
+        x = self.lr(self.pool2(self.conv2(x)))
+        x = self.lr(self.pool3(self.conv3(x)))
+        # x = self.bn4(self.lr(self.conv4(x)))
+        # x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.shape[0], -1)
         x = self.lr(self.lin1(x))
         x = self.lr(self.lin2(torch.cat([x, actions], 1)))  # c
         x = self.lin3(x)
@@ -142,7 +154,7 @@ class DDPG(object):
         super(DDPG, self).__init__()
         print("Starting DDPG init")
         assert net_type in ["cnn", "dense"]
-
+        self.pred_buffer = []
         self.state_dim = state_dim
 
         if net_type == "dense":
@@ -153,7 +165,7 @@ class DDPG(object):
             self.flat = False
             self.actor = ActorCNN(action_dim, max_action).to(device)
             self.actor_target = ActorCNN(action_dim, max_action).to(device)
-        
+
         print("Initialized Actor")
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
@@ -170,15 +182,23 @@ class DDPG(object):
         print("Initialized Target+Opt [Critic]")
 
     def predict(self, state):
-
+        # state = state[0]
+        # print(np.shape(state))
+        if np.size(self.pred_buffer) == 0:
+            seq = [state for _ in range(SEQUENCE_LENGTH)]
+            states = np.concatenate(seq)
+        else:
+            states = np.concatenate((self.pred_buffer[3:], state))
+        self.pred_buffer = states
         # just making sure the state has the correct format, otherwise the prediction doesn't work
-        assert state.shape[0] == 3
+        # print(states.shape)
+        assert states.shape[0] == 15
 
         if self.flat:
-            state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+            states = torch.FloatTensor(states.reshape(1, -1)).to(device)
         else:
-            state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
-        return self.actor(state).cpu().data.numpy().flatten()
+            states = torch.FloatTensor(np.expand_dims(states, axis=0)).to(device)
+        return self.actor(states).cpu().data.numpy().flatten()
 
     def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001):
 
@@ -193,6 +213,7 @@ class DDPG(object):
             reward = torch.FloatTensor(sample["reward"]).to(device)
 
             # Compute the target Q value
+            # print(next_state.shape)
             target_Q = self.critic_target(next_state, self.actor_target(next_state))
             target_Q = reward + (done * discount * target_Q).detach()
 
@@ -228,7 +249,7 @@ class DDPG(object):
         print("Saved Actor")
         torch.save(self.critic.state_dict(), '{}/{}_critic.pth'.format(directory, filename))
         print("Saved Critic")
-        
+
     def load(self, filename, directory):
         self.actor.load_state_dict(torch.load('{}/{}_actor.pth'.format(directory, filename), map_location=device))
         self.critic.load_state_dict(torch.load('{}/{}_critic.pth'.format(directory, filename), map_location=device))
