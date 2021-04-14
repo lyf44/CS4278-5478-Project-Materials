@@ -1322,22 +1322,22 @@ class Simulator(gym.Env):
         else:
 
             # Compute the reward
-            # reward = (
-            #         +1.0 * speed * lp.dot_dir +
-            #         -10 * np.abs(lp.dist) +
-            #         +40 * col_penalty
-            # )
+            reward = (
+                    +1.0 * speed * lp.dot_dir +
+                    -10 * np.abs(lp.dist) +
+                    +40 * col_penalty
+            )
 
-            reward = 10 * speed * lp.dot_dir - 100 * np.abs(lp.dist) + 400 * col_penalty
+            # reward = 10 * speed * lp.dot_dir - 100 * np.abs(lp.dist) + 400 * col_penalty
 
-        dist_to_stop = 1000.0
-        #print("number of objects = ", len(self.objects))
-        for obj in self.objects:
-            if obj.kind == "sign_stop":
-                dist_to_stop = min(dist_to_stop, ((pos[0] - obj.pos[0]) ** 2 + (pos[2] - obj.pos[2]) ** 2) ** 0.5)
+        # dist_to_stop = 1000.0
+        # #print("number of objects = ", len(self.objects))
+        # for obj in self.objects:
+        #     if obj.kind == "sign_stop":
+        #         dist_to_stop = min(dist_to_stop, ((pos[0] - obj.pos[0]) ** 2 + (pos[2] - obj.pos[2]) ** 2) ** 0.5)
 
-        if self.speed > 0.15 and dist_to_stop < 0.3:
-            reward = -100.0
+        # if self.speed > 0.15 and dist_to_stop < 0.3:
+        #     reward = -100.0
         return reward
 
     def step(self, action: np.ndarray):

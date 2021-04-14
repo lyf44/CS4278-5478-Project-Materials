@@ -1,7 +1,7 @@
 import ast
 import argparse
 import logging
-
+import math
 import os
 import numpy as np
 import sys
@@ -20,7 +20,6 @@ writer = SummaryWriter('runs/ddpg')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-SEQUENCE_LENGTH = 5
 
 def _train(args):
     if not os.path.exists("./results"):
@@ -42,14 +41,16 @@ def _train(args):
 
     # Set seeds
     seed(args.seed)
-    obs_dim = env.observation_space.shape
-    state_dim = np.array([obs_dim[0], obs_dim[1], obs_dim[2]*SEQUENCE_LENGTH])
+
+    state_dim = env.observation_space.shape
+    print(state_dim)
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
 
     # Initialize policy
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
     replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
+    policy.set_mode(training=False)
     print("Initialized DDPG")
 
     # Evaluate untrained policy
@@ -64,7 +65,6 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
-    misc = {}
     action = []
 
     print("Starting training")
@@ -74,11 +74,13 @@ def _train(args):
 
         if done:
             if total_timesteps != 0:
-                print(misc['Simulator']['msg'])
                 print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
                     total_timesteps, episode_num, episode_timesteps, episode_reward))
+                policy.set_mode(True)
                 policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
-                writer.add_scalar('reward', episode_reward/10000, episode_num)
+                policy.set_mode(False)
+                writer.add_scalar('reward', episode_reward, episode_num)
+
                 # Evaluate episode
                 if timesteps_since_eval >= args.eval_freq:
                     timesteps_since_eval %= args.eval_freq
@@ -89,10 +91,10 @@ def _train(args):
                         policy.save(filename='ddpg', directory=args.model_dir)
                     np.savez("./results/rewards.npz",evaluations)
 
-
             # Reset environment
             env_counter += 1
             obs = env.reset()
+            # print(obs.shape)
             done = False
             episode_reward = 0
             episode_timesteps = 0
@@ -104,6 +106,7 @@ def _train(args):
             action[0] = (action[0] + 1) / 2
         else:
             action = policy.predict(np.array(obs))
+            # print(action)
             if args.expl_noise != 0:
                 action = (action + np.random.normal(
                     0,
@@ -112,29 +115,18 @@ def _train(args):
                           ).clip(env.action_space.low, env.action_space.high)
 
         # Perform action
-        new_obs, reward, done, misc = env.step(action)
-        if action[0] < 0.001:   #Penalise slow actions: helps the bot to figure out that going straight > turning in circles
-            reward = -40
+        new_obs, reward, done, _ = env.step(action)
+        if math.fabs(action[0]) < 0.001: # Penalize slow actions: helps the bot to figure out that going straight > turning in circles
+            reward = 0
 
         if episode_timesteps >= args.env_timesteps:
             done = True
 
         done_bool = 0 if episode_timesteps + 1 == args.env_timesteps else float(done)
         episode_reward += reward
-        # from PIL import Image
-        # obs = np.array(Image.fromarray(obs).resize((np.shape(obs)[0], int(np.shape(obs)[1]/2), int(np.shape(obs)[2]/2))))
-        # new_obs = np.array(Image.fromarray(new_obs).resize((int(np.shape(obs)[0]/2), int(np.shape(obs)[1]/2))))
-        if episode_timesteps == 0:
-            seq = [obs for _ in range(SEQUENCE_LENGTH)]
-            obs_seq = np.concatenate(seq)
-        else:
-            obs_seq = np.concatenate((obs_seq[3:], obs))
+
         # Store data in replay buffer
-        new_obs_seq = np.concatenate((obs_seq[3:], new_obs))
-        # print(np.shape(new_obs_seq))
-        assert obs_seq.shape == (15, 80, 60)
-        assert new_obs_seq.shape == (15, 80, 60)
-        replay_buffer.add(obs_seq, new_obs_seq, action, reward, done_bool)
+        replay_buffer.add(obs, new_obs, action, reward, done_bool)
 
         obs = new_obs
 
@@ -150,8 +142,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # DDPG Args
-    parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--start_timesteps", default=1e4, type=int)  # How many time steps purely random policy is run for
+    parser.add_argument("--seed", default=200, type=int)  # Sets Gym, PyTorch and Numpy seeds
+    parser.add_argument("--start_timesteps", default=10000, type=int)  # How many time steps purely random policy is run for
     parser.add_argument("--eval_freq", default=5e3, type=float)  # How often (time steps) we evaluate
     parser.add_argument("--max_timesteps", default=1e6, type=float)  # Max time steps to run environment for
     parser.add_argument("--save_models", action="store_true", default=True)  # Whether or not models are saved

@@ -20,7 +20,7 @@ def launch_env(id=None):
         from gym_duckietown.envs import DuckietownEnv
         env = DuckietownEnv(
             seed=123, # random seed
-            map_name="loop_empty",
+            map_name="map1",
             max_steps=500001, # we don't want the gym to reset itself
             domain_rand=0,
             camera_width=640,

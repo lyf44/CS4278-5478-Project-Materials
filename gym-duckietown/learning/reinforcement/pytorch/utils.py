@@ -36,7 +36,7 @@ class ReplayBuffer(object):
 
         for i in ind:
             state, next_state, action, reward, done = self.storage[i]
-            assert state.shape == (15, 80, 60)
+            # assert state.shape == (15, 80, 60)
             if flat:
                 states.append(np.array(state, copy=False).flatten())
                 next_states.append(np.array(next_state, copy=False).flatten())

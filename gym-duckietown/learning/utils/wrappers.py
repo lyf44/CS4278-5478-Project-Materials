@@ -4,7 +4,7 @@ import numpy as np
 
 
 class ResizeWrapper(gym.ObservationWrapper):
-    def __init__(self, env=None, shape=(64, 64, 3)):
+    def __init__(self, env=None, shape=(64, 64, 3)): # 60, 80
         super(ResizeWrapper, self).__init__(env)
         self.observation_space.shape = shape
         self.observation_space = spaces.Box(
@@ -59,11 +59,13 @@ class DtRewardWrapper(gym.RewardWrapper):
 
     def reward(self, reward):
         if reward == -1000:
-            reward = -40
-        # elif reward > 0:
-        #     reward += 10
-        # else:
-        #     reward += 4
+            reward = -10 # -40
+        elif reward > 0:
+            reward += 10
+            # reward *= 5
+        else:
+            reward += 4
+            # pass
 
         return reward
 

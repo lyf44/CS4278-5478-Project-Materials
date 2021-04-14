@@ -1,6 +1,7 @@
 import ast
 import argparse
 import logging
+import cv2
 
 import os
 import numpy as np
@@ -27,10 +28,11 @@ def _enjoy():
 
     state_dim = env.observation_space.shape
     action_dim = env.action_space.shape[0]
-    max_action = float(env.action_space.high[0]) * 0.8
+    max_action = float(env.action_space.high[0])
 
     # Initialize policy
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
+    policy.set_mode(False)
     policy.load(filename='ddpg', directory='reinforcement/pytorch/models/')
 
     obs = env.reset()
@@ -39,6 +41,12 @@ def _enjoy():
     while True:
         total_reward = 0
         while not done:
+            # print(obs.max())
+            # img = np.array(obs).transpose(1,2,0)
+            # print(img.shape)
+            # cv2.imshow("img", img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             action = policy.predict(np.array(obs))
             print(action)
             # Perform action
