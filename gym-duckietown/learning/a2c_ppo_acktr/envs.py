@@ -1,5 +1,5 @@
 import os
-
+import sys
 import gym
 import numpy as np
 import torch
@@ -15,6 +15,12 @@ from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
                                               VecEnvWrapper)
 from stable_baselines3.common.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
+
+from utils.wrappers import NormalizeWrapper, ImgWrapper, \
+    DtRewardWrapper, ActionWrapper, ResizeWrapper
+from utils.env import launch_env
 
 try:
     import dmc2gym
@@ -79,6 +85,18 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
 
     return _thunk
 
+def make_env_2():
+    def _thunk():
+        env = launch_env()
+        env = ResizeWrapper(env)
+        env = NormalizeWrapper(env)
+        env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
+        env = ActionWrapper(env)
+        env = DtRewardWrapper(env)
+
+        return env
+
+    return _thunk
 
 def make_vec_envs(env_name,
                   seed,
@@ -89,7 +107,8 @@ def make_vec_envs(env_name,
                   allow_early_resets,
                   num_frame_stack=None):
     envs = [
-        make_env(env_name, seed, i, log_dir, allow_early_resets)
+        # make_env(env_name, seed, i, log_dir, allow_early_resets)
+        make_env_2()
         for i in range(num_processes)
     ]
 

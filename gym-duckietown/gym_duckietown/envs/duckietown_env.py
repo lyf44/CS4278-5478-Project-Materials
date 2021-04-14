@@ -73,6 +73,10 @@ class DuckietownEnv(Simulator):
         vels = np.array([u_l_limited, u_r_limited])
 
         obs, reward, done, info = Simulator.step(self, vels)
+
+        if action[0] < 0.01:
+            reward = -10
+
         mine = {}
         mine['k'] = self.k
         mine['gain'] = self.gain
