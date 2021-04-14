@@ -85,9 +85,9 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
 
     return _thunk
 
-def make_env_2():
+def make_env_2(i):
     def _thunk():
-        env = launch_env()
+        env = launch_env(seed=i)
         env = ResizeWrapper(env)
         env = NormalizeWrapper(env)
         env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
@@ -108,7 +108,7 @@ def make_vec_envs(env_name,
                   num_frame_stack=None):
     envs = [
         # make_env(env_name, seed, i, log_dir, allow_early_resets)
-        make_env_2()
+        make_env_2(seed + i)
         for i in range(num_processes)
     ]
 

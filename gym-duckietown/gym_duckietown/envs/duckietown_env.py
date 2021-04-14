@@ -1,6 +1,7 @@
 # coding=utf-8
 import numpy as np
 from gym import spaces
+import math
 
 from ..simulator import Simulator
 from .. import logger
@@ -45,6 +46,8 @@ class DuckietownEnv(Simulator):
         # Wheel velocity limit
         self.limit = limit
 
+        self.episode_reward = 0
+
     def step(self, action):
         vel, angle = action
 
@@ -74,8 +77,10 @@ class DuckietownEnv(Simulator):
 
         obs, reward, done, info = Simulator.step(self, vels)
 
-        if action[0] < 0.01:
+        if math.fabs(action[0]) < 0.01:
             reward = -10
+
+        self.episode_reward += reward
 
         mine = {}
         mine['k'] = self.k
@@ -85,6 +90,11 @@ class DuckietownEnv(Simulator):
         mine['omega_r'] = omega_r
         mine['omega_l'] = omega_l
         info['DuckietownEnv'] = mine
+        info['episode_reward'] = self.episode_reward
+
+        if done:
+            self.episode_reward = 0
+
         return obs, reward, done, info
 
 

@@ -24,11 +24,11 @@ parser.add_argument(
     help='log interval, one log per n updates (default: 10)')
 parser.add_argument(
     '--env-name',
-    default='PongNoFrameskip-v4',
+    default='duckietown',
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
-    default='./trained_models/a2c/',
+    default='./reinforcement/pytorch/trained_models/ppo/',
     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument(
     '--non-det',
@@ -81,8 +81,13 @@ while True:
         value, action, _, recurrent_hidden_states = actor_critic.act(
             obs, recurrent_hidden_states, masks, deterministic=args.det)
 
+    print(action)
+
     # Obser reward and next obs
     obs, reward, done, _ = env.step(action)
     env.render()
 
     masks.fill_(0.0 if done else 1.0)
+
+    if done:
+        break

@@ -30,17 +30,8 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
 
-from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer
-from utils.wrappers import NormalizeWrapper, ImgWrapper, \
-    DtRewardWrapper, ActionWrapper, ResizeWrapper
-from utils.env import launch_env
-
-# Duckietown Specific
-# from reinforcement.pytorch.ddpg import DDPG
-
-
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter('runs/ddpg')
+writer = SummaryWriter('runs/ppo')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -49,12 +40,9 @@ SEQUENCE_LENGTH = 5
 def main(args):
     if not os.path.exists("./results"):
         os.makedirs("./results")
-    if not os.path.exists(args.model_dir):
-        os.makedirs(args.model_dir)
 
     # Launch the envs with our helper function
     # envs = launch_env()
-
 
     # Wrappers
     # envs = ResizeWrapper(envs)
@@ -63,12 +51,10 @@ def main(args):
     # envs = ActionWrapper(envs)
     # envs = DtRewardWrapper(envs)
 
-    args = get_args()
-
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    if args.cuda and torch.cuda.is_available() and args.cuda_deterministic:
+    if torch.cuda.is_available() and args.cuda_deterministic:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
@@ -78,7 +64,7 @@ def main(args):
     utils.cleanup_log_dir(eval_log_dir)
 
     torch.set_num_threads(1)
-    device = torch.device("cuda:0" if args.cuda else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     print("Initialized envsironments")
     envs = make_vec_envs(None, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
@@ -132,17 +118,24 @@ def main(args):
             # Observe reward and next obs
             # env_action = action[0].cpu().numpy()
             # print(env_action)
+            # print(action)
             obs, reward, done, infos = envs.step(action)
 
+            # for info in infos:
+            #     print(info)
+            #     if 'episode' in info.keys():
+            #         episode_rewards.append(info['episode']['r'])
             for info in infos:
-                if 'episode' in info.keys():
-                    episode_rewards.append(info['episode']['r'])
+                if 'episode_reward' in info.keys():
+                    episode_rewards.append(info['episode_reward'])
 
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
             bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
             rollouts.insert(obs, recurrent_hidden_states, action,
                             action_log_prob, value, reward, masks, bad_masks)
+
+        # print(episode_rewards)
 
         with torch.no_grad():
             next_value = actor_critic.get_value(
@@ -157,8 +150,7 @@ def main(args):
         rollouts.after_update()
 
         # save for every interval-th episode or for the last epoch
-        if (j % args.save_interval == 0
-                or j == num_updates - 1) and args.save_dir != "":
+        if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
             save_path = os.path.join(args.save_dir, args.algo)
             try:
                 os.makedirs(save_path)
@@ -182,34 +174,55 @@ def main(args):
                         np.median(episode_rewards), np.min(episode_rewards),
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
+            writer.add_scalar('reward', np.mean(episode_rewards), total_num_steps)
 
         if (args.eval_interval is not None and len(episode_rewards) > 1
                 and j % args.eval_interval == 0):
             obs_rms = utils.get_vec_normalize(envs).obs_rms
-            evaluate(actor_critic, obs_rms, args.env_name, args.seed,
-                     args.num_processes, eval_log_dir, device)
+            evaluate(actor_critic, obs_rms, args.env_name, args.seed, args.num_processes, eval_log_dir, device)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # DDPG Args
-    parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--start_timesteps", default=1e4, type=int)  # How many time steps purely random policy is run for
-    parser.add_argument("--eval_freq", default=5e3, type=float)  # How often (time steps) we evaluate
-    parser.add_argument("--max_timesteps", default=1e6, type=float)  # Max time steps to run environment for
-    parser.add_argument("--save_models", action="store_true", default=True)  # Whether or not models are saved
-    parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
-    parser.add_argument("--batch_size", default=32, type=int)  # Batch size for both actor and critic
-    parser.add_argument("--discount", default=0.99, type=float)  # Discount factor
-    parser.add_argument("--tau", default=0.005, type=float)  # Target network update rate
-    parser.add_argument("--policy_noise", default=0.2, type=float)  # Noise added to target policy during critic update
-    parser.add_argument("--noise_clip", default=0.5, type=float)  # Range to clip target policy noise
-    parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
-    parser.add_argument("--env_timesteps", default=500, type=int)  # Frequency of delayed policy updates
-    parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
-    parser.add_argument('--model-dir', type=str, default='reinforcement/pytorch/models/')
-    parser.add_argument('--algo', type=str, default='ppo')
+    parser = argparse.ArgumentParser(description='RL')
+    parser.add_argument('--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
+    parser.add_argument('--gail', action='store_true', default=False, help='do imitation learning with gail')
+    parser.add_argument('--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+    parser.add_argument('--eps', type=float, default=1e-5, help='RMSprop optimizer epsilon (default: 1e-5)')
+    parser.add_argument('--alpha', type=float, default=0.99, help='RMSprop optimizer apha (default: 0.99)')
+    parser.add_argument('--gamma', type=float, default=0.99,help='discount factor for rewards (default: 0.99)')
+    parser.add_argument('--use-gae', action='store_true', default=False, help='use generalized advantage estimation')
+    parser.add_argument('--gae-lambda', type=float, default=0.95, help='gae lambda parameter (default: 0.95)')
+    parser.add_argument('--entropy-coef', type=float, default=0.01,help='entropy term coefficient (default: 0.01)')
+    parser.add_argument('--value-loss-coef', type=float, default=0.5, help='value loss coefficient (default: 0.5)')
+    parser.add_argument('--max-grad-norm', type=float, default=0.5, help='max norm of gradients (default: 0.5)')
+    parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
+    parser.add_argument('--cuda-deterministic', action='store_true', default=False, help="sets flags for determinism when using CUDA (potentially slow!)")
+    parser.add_argument('--num-processes', type=int, default=16, help='how many training CPU processes to use (default: 16)')
+    parser.add_argument('--num-steps', type=int,  default=5, help='number of forward steps in A2C (default: 5)')
+    parser.add_argument('--ppo-epoch', type=int, default=4, help='number of ppo epochs (default: 4)')
+    parser.add_argument('--num-mini-batch', type=int, default=32, help='number of batches for ppo (default: 32)')
+    parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
+    parser.add_argument('--log-interval', type=int, default=10, help='log interval, one log per n updates (default: 10)')
+    parser.add_argument('--save-interval', type=int, default=100, help='save interval, one save per n updates (default: 100)')
+    parser.add_argument('--eval-interval', type=int, default=None, help='eval interval, one eval per n updates (default: None)')
+    parser.add_argument('--num-env-steps', type=int, default=10e6, help='number of environment steps to train (default: 10e6)')
+    parser.add_argument('--env-name', default='duckietown', help='environment to train on (default: PongNoFrameskip-v4)')
+    parser.add_argument('--log-dir', default='./reinforcement/pytorch/log/', help='directory to save agent logs (default: /tmp/gym)')
+    parser.add_argument('--save-dir', default='./reinforcement/pytorch/trained_models/', help='directory to save agent logs (default: ./trained_models/)')
+    parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')
+    parser.add_argument('--use-proper-time-limits', action='store_true', default=False, help='compute returns taking into account time limits')
+    parser.add_argument('--recurrent-policy', action='store_true', default=False, help='use a recurrent policy')
+    parser.add_argument('--use-linear-lr-decay', action='store_true', default=False, help='use a linear schedule on the learning rate')
+    args = parser.parse_args()
 
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+    assert args.algo in ['a2c', 'ppo', 'acktr']
+    if args.recurrent_policy:
+        assert args.algo in ['a2c', 'ppo'], \
+            'Recurrent policy is not implemented for ACKTR'
 
     main(parser.parse_args())
