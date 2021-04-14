@@ -4,7 +4,7 @@ import numpy as np
 
 
 class ResizeWrapper(gym.ObservationWrapper):
-    def __init__(self, env=None, shape=(60, 80, 3)):
+    def __init__(self, env=None, shape=(64, 64, 3)):
         super(ResizeWrapper, self).__init__(env)
         self.observation_space.shape = shape
         self.observation_space = spaces.Box(
@@ -16,7 +16,10 @@ class ResizeWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         from PIL import Image
-        return np.array(Image.fromarray(observation).resize(self.shape[0:2]))
+        print(observation.shape)
+        obs = np.array(Image.fromarray(observation).resize(self.shape[0:2]))
+        print(obs.shape)
+        return obs
 
 
 class NormalizeWrapper(gym.ObservationWrapper):
@@ -45,7 +48,9 @@ class ImgWrapper(gym.ObservationWrapper):
             dtype=self.observation_space.dtype)
 
     def observation(self, observation):
-        return observation.transpose(2, 0, 1)
+        obs = observation.transpose(2, 0, 1)
+        print(obs.shape)
+        return obs
 
 
 class DtRewardWrapper(gym.RewardWrapper):
