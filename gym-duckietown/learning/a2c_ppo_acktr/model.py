@@ -26,6 +26,8 @@ class Policy(nn.Module):
                 raise NotImplementedError
 
         self.base = base(obs_shape[0], **base_kwargs)
+        self.is_recurrent_val = self.base.is_recurrent
+        self.recurrent_hidden_state_size_val = self.base.recurrent_hidden_state_size
 
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
@@ -41,12 +43,14 @@ class Policy(nn.Module):
 
     @property
     def is_recurrent(self):
-        return self.base.is_recurrent
+        # return self.base.is_recurrent
+        return self.is_recurrent_val
 
     @property
     def recurrent_hidden_state_size(self):
         """Size of rnn_hx."""
-        return self.base.recurrent_hidden_state_size
+        # return self.base.recurrent_hidden_state_size
+        return self.recurrent_hidden_state_size_val
 
     def forward(self, inputs, rnn_hxs, masks):
         raise NotImplementedError
