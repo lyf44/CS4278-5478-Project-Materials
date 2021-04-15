@@ -78,6 +78,8 @@ class Policy(nn.Module):
 
         return value, action_log_probs, dist_entropy, rnn_hxs
 
+    def multi_gpu(self):
+        self.base = nn.DataParallel(self.base)
 
 class NNBase(nn.Module):
     def __init__(self, recurrent, recurrent_input_size, hidden_size):
