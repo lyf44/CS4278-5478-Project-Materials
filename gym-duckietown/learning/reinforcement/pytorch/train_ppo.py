@@ -68,13 +68,15 @@ def main(args):
 
     print("Initialized envsironments, device = {}".format(device))
     envs = make_vec_envs(None, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
+    obs_dim = envs.observation_space.shape
+    state_dim = np.array([obs_dim[0], obs_dim[1], obs_dim[2]*SEQUENCE_LENGTH])
 
     if args.load_model:
         print("loading existing models!!")
         actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + ".pt"))
     else:
         actor_critic = Policy(
-            envs.observation_space.shape,
+            state_dim,
             envs.action_space,
             base_kwargs={'recurrent': args.recurrent_policy})
 
@@ -98,7 +100,9 @@ def main(args):
 
     obs = envs.reset()
     # print(obs.shape)
-    rollouts.obs[0].copy_(torch.tensor(obs))
+    seq = [obs for _ in range(SEQUENCE_LENGTH)] # initial seq
+    obs_seq = np.concatenate(seq)
+    rollouts.obs[0].copy_(torch.tensor(obs_seq))
     rollouts.to(device)
 
     episode_rewards = deque(maxlen=10)
@@ -125,7 +129,7 @@ def main(args):
             # print(env_action)
             # print(action)
             obs, reward, done, infos = envs.step(action)
-
+            obs_seq = np.concatenate((obs_seq[3:], obs))
             # for info in infos:
             #     print(info)
             #     if 'episode' in info.keys():
@@ -137,7 +141,7 @@ def main(args):
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
             bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
-            rollouts.insert(obs, recurrent_hidden_states, action,
+            rollouts.insert(obs_seq, recurrent_hidden_states, action,
                             action_log_prob, value, reward, masks, bad_masks)
 
         # print(episode_rewards)
