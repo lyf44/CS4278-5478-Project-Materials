@@ -66,14 +66,17 @@ def main(args):
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    print("Initialized envsironments")
+    print("Initialized envsironments, device = {}".format(device))
     envs = make_vec_envs(None, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
 
-    actor_critic = Policy(
-        envs.observation_space.shape,
-        envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy})
-    actor_critic.to(device)
+    if args.load_model:
+        print("loading existing models!!")
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + ".pt"))
+    else:
+        actor_critic = Policy(
+            envs.observation_space.shape,
+            envs.action_space,
+            base_kwargs={'recurrent': args.recurrent_policy})
 
     agent = algo.PPO(
         actor_critic,
@@ -90,6 +93,8 @@ def main(args):
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size)
+
+    actor_critic.to(device)
 
     obs = envs.reset()
     # print(obs.shape)
@@ -216,6 +221,7 @@ if __name__ == "__main__":
     parser.add_argument('--use-proper-time-limits', action='store_true', default=False, help='compute returns taking into account time limits')
     parser.add_argument('--recurrent-policy', action='store_true', default=False, help='use a recurrent policy')
     parser.add_argument('--use-linear-lr-decay', action='store_true', default=False, help='use a linear schedule on the learning rate')
+    parser.add_argument('--load-model', default=False, help='load a model')
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
