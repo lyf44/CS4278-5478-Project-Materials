@@ -3,7 +3,11 @@ import glob
 # import os
 import time
 from collections import deque
-
+import ast
+import argparse
+import logging
+import os
+import sys
 import gym
 import numpy as np
 import torch
@@ -11,24 +15,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.algo import gail
-from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.envs import make_vec_envs
-from a2c_ppo_acktr.model import Policy
-from a2c_ppo_acktr.storage import RolloutStorage
-from evaluation_ppo import evaluate
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-import ast
-import argparse
-import logging
-
-import os
-import numpy as np
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
+from .a2c_ppo_acktr import algo, utils
+from .a2c_ppo_acktr.algo import gail
+from .a2c_ppo_acktr.arguments import get_args
+from .a2c_ppo_acktr.envs import make_vec_envs
+from .a2c_ppo_acktr.model import Policy
+from .a2c_ppo_acktr.storage import RolloutStorage
+from .evaluation_ppo import evaluate
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter('runs/ppo')

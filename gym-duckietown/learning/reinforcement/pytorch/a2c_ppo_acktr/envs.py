@@ -16,7 +16,7 @@ from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
 from stable_baselines3.common.vec_env.vec_normalize import \
     VecNormalize as VecNormalize_
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
 
 from utils.wrappers import NormalizeWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
