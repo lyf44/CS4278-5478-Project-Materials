@@ -93,7 +93,7 @@ def main(args):
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size)
-    actor_critic.multi_gpu()
+    # actor_critic.multi_gpu()
     actor_critic.to(device)
 
     obs = envs.reset()
