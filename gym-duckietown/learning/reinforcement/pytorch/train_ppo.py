@@ -17,7 +17,7 @@ from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.envs import make_vec_envs
 from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
-from evaluation import evaluate
+from evaluation_ppo import evaluate
 
 import ast
 import argparse
@@ -130,8 +130,8 @@ def main(args):
             #     print(info)
             #     if 'episode' in info.keys():
             #         episode_rewards.append(info['episode']['r'])
-            for info in infos:
-                if 'episode_reward' in info.keys():
+            for i, info in enumerate(infos):
+                if done[i] and 'episode_reward' in info.keys():
                     episode_rewards.append(info['episode_reward'])
 
             # If done then clean the history of observations.
@@ -143,9 +143,7 @@ def main(args):
         # print(episode_rewards)
 
         with torch.no_grad():
-            next_value = actor_critic.get_value(
-                rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
-                rollouts.masks[-1]).detach()
+            next_value = actor_critic.get_value(rollouts.obs[-1], rollouts.recurrent_hidden_states[-1], rollouts.masks[-1]).detach()
 
         rollouts.compute_returns(next_value, args.use_gae, args.gamma,
                                  args.gae_lambda, args.use_proper_time_limits)

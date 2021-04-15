@@ -90,9 +90,9 @@ class DuckietownEnv(Simulator):
         mine['omega_r'] = omega_r
         mine['omega_l'] = omega_l
         info['DuckietownEnv'] = mine
-        info['episode_reward'] = self.episode_reward
 
         if done:
+            info['episode_reward'] = self.episode_reward
             self.episode_reward = 0
 
         return obs, reward, done, info
