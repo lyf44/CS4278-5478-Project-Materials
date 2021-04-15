@@ -42,7 +42,7 @@ args.det = not args.non_det
 
 env = make_vec_envs(
     None,
-    args.seed + 1000,
+    args.seed + 1,
     1,
     None,
     None,
@@ -76,6 +76,7 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
+total_reward = 0
 while True:
     with torch.no_grad():
         value, action, _, recurrent_hidden_states = actor_critic.act(
@@ -86,8 +87,10 @@ while True:
     # Obser reward and next obs
     obs, reward, done, _ = env.step(action)
     env.render()
-
+    total_reward += reward
     masks.fill_(0.0 if done else 1.0)
 
     if done:
         break
+
+print(total_reward)
