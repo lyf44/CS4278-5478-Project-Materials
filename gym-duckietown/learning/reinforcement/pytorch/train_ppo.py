@@ -129,7 +129,7 @@ def main(args):
                 if 'episode_reward' in info.keys():
                     episode_rewards.append(info['episode_reward'])
 
-            # If done then clean the history of observations.
+            # If done then clean the history of observations.store_true
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
             bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
             rollouts.insert(obs, recurrent_hidden_states, action,
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RL')
     parser.add_argument('--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument('--gail', action='store_true', default=False, help='do imitation learning with gail')
-    parser.add_argument('--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+    parser.add_argument('--lr', type=float, default=2.5e-4, help='learning rate (default: 7e-4)')
     parser.add_argument('--eps', type=float, default=1e-5, help='RMSprop optimizer epsilon (default: 1e-5)')
     parser.add_argument('--alpha', type=float, default=0.99, help='RMSprop optimizer apha (default: 0.99)')
     parser.add_argument('--gamma', type=float, default=0.99,help='discount factor for rewards (default: 0.99)')
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
     parser.add_argument('--cuda-deterministic', action='store_true', default=False, help="sets flags for determinism when using CUDA (potentially slow!)")
     parser.add_argument('--num-processes', type=int, default=16, help='how many training CPU processes to use (default: 16)')
-    parser.add_argument('--num-steps', type=int,  default=5, help='number of forward steps in A2C (default: 5)')
+    parser.add_argument('--num-steps', type=int,  default=128, help='number of forward steps in A2C (default: 5)')
     parser.add_argument('--ppo-epoch', type=int, default=4, help='number of ppo epochs (default: 4)')
     parser.add_argument('--num-mini-batch', type=int, default=32, help='number of batches for ppo (default: 32)')
     parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')
     parser.add_argument('--use-proper-time-limits', action='store_true', default=False, help='compute returns taking into account time limits')
     parser.add_argument('--recurrent-policy', action='store_true', default=False, help='use a recurrent policy')
-    parser.add_argument('--use-linear-lr-decay', action='store_true', default=False, help='use a linear schedule on the learning rate')
+    parser.add_argument('--use-linear-lr-decay', action='store_true', default=True, help='use a linear schedule on the learning rate')
     parser.add_argument('--load-model', default=False, help='load a model')
     args = parser.parse_args()
 
