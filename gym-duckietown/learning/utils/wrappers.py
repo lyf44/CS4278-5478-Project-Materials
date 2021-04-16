@@ -1,7 +1,7 @@
 import gym
 from gym import spaces
 import numpy as np
-
+import cv2
 
 class ResizeWrapper(gym.ObservationWrapper):
     def __init__(self, env=None, shape=(64, 64, 3)): # 60, 80
@@ -15,9 +15,11 @@ class ResizeWrapper(gym.ObservationWrapper):
         self.shape = shape
 
     def observation(self, observation):
+
         from PIL import Image
-        # print(observation.shape)
+        # print(observation.dtype)
         obs = np.array(Image.fromarray(observation).resize(self.shape[0:2]))
+        # print(np.max(obs))
         # print(obs.shape)
         return obs
 
@@ -48,8 +50,34 @@ class ImgWrapper(gym.ObservationWrapper):
             dtype=self.observation_space.dtype)
 
     def observation(self, observation):
-        obs = observation.transpose(2, 0, 1)
+        # print(observation.shape)
+        obs = observation[10:, :, :]
+
+        img_hsv = cv2.cvtColor(obs.astype(np.float32), cv2.COLOR_RGB2HSV)
+        low_val = (0,0,0.5)
+        high_val = (80,1,1)
+        mask = cv2.inRange(img_hsv, low_val,high_val)
+        obs = cv2.bitwise_and(obs, obs, mask=mask) * 255
+        obs = obs.astype('uint8')
+
+        # img_hsv = cv2.cvtColor(obs.astype(np.float32), cv2.COLOR_RGB2HSV)
+        # print(np.max(obs))
+        # obs_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
+        # cv2.imshow("img", obs_bgr)
+        # cv2.waitKey(1)
+
+        # from PIL import Image
+        # print(observation.shape)
+        # obs = np.array(Image.fromarray(obs).resize(self.shape[0:2]))
+        # print(np.max(obs))
+        obs = cv2.resize(obs, (self.shape[:2]))
+        # obs_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
+        # cv2.imshow("img", obs_bgr)
+        # cv2.waitKey(1)
+        obs = obs.transpose(2, 0, 1) # 3x64x64
+        # obs = observation.transpose(2,0,1)
         # print(obs.shape)
+
         return obs
 
 

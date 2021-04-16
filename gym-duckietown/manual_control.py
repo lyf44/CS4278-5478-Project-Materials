@@ -15,13 +15,15 @@ import gym
 import gym_duckietown
 from gym_duckietown.envs import DuckietownEnv
 from gym_duckietown.wrappers import UndistortWrapper
+from learning.utils.wrappers import NormalizeWrapper, ImgWrapper, \
+    DtRewardWrapper, ActionWrapper, ResizeWrapper
 
 # from experiments.utils import save_img
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env-name', default=None)
 parser.add_argument('--map-name', default='udem1')
-parser.add_argument('--distortion', default=False, action='store_true')
+parser.add_argument('--distortion', default=True, action='store_true')
 parser.add_argument('--draw-curve', action='store_true', help='draw the lane following curve')
 parser.add_argument('--draw-bbox', action='store_true', help='draw collision detection bounding boxes')
 parser.add_argument('--domain-rand', action='store_true', help='enable domain randomization')
@@ -39,6 +41,9 @@ if args.env_name and args.env_name.find('Duckietown') != -1:
         frame_skip = args.frame_skip,
         distortion = args.distortion,
     )
+    env = ResizeWrapper(env)
+    env = NormalizeWrapper(env)
+    env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
 else:
     env = gym.make(args.env_name)
 
@@ -97,6 +102,7 @@ def update(dt):
         action *= 1.5
 
     obs, reward, done, info = env.step(action)
+
     print(obs)
     print('step_count = %s, reward=%.3f' % (env.unwrapped.step_count, reward))
 

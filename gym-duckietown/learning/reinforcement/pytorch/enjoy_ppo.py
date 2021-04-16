@@ -6,11 +6,15 @@ import sys
 import numpy as np
 import torch
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
-from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
+# sys.path.append(os.path.join(os.path.dirname(__file__), "../../../"))
+# sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
+
+from .a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
+from .a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
+
+
 
 sys.path.append('a2c_ppo_acktr')
 
@@ -42,7 +46,7 @@ args.det = not args.non_det
 
 env = make_vec_envs(
     None,
-    args.seed + 1,
+    args.seed + 15,
     1,
     None,
     None,
