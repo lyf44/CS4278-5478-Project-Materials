@@ -176,14 +176,18 @@ class CNNBase(NNBase):
     def __init__(self, num_inputs, recurrent=False, hidden_size=512):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
 
+        self.bn1 = nn.BatchNorm2d(32)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.bn3 = nn.BatchNorm2d(32)
+
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0), nn.init.calculate_gain('relu'))
 
         self.main = nn.Sequential(
-            init_(nn.Conv2d(num_inputs, 32, 4, stride=2)), nn.ReLU(),
-            init_(nn.Conv2d(32, 64, 2, stride=2)), nn.ReLU(),
-            init_(nn.Conv2d(64, 32, 2, stride=2)), nn.ReLU(),
-            init_(nn.Conv2d(32, 32, 2, stride=1)), nn.ReLU(), Flatten(),
+            init_(nn.Conv2d(num_inputs, 32, 4, stride=2)), nn.ReLU(), nn.BatchNorm2d(32),
+            init_(nn.Conv2d(32, 64, 2, stride=2)), nn.ReLU(), nn.BatchNorm2d(64),
+            init_(nn.Conv2d(64, 32, 2, stride=2)), nn.ReLU(), nn.BatchNorm2d(32),
+            init_(nn.Conv2d(32, 32, 2, stride=1)), nn.ReLU(), nn.BatchNorm2d(32), Flatten(),
             init_(nn.Linear(32 * 6 * 6, hidden_size)), nn.ReLU()) # TODO change size
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.

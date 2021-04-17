@@ -14,9 +14,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__)))
 from .a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
 from .a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
 
-
-
 sys.path.append('a2c_ppo_acktr')
+
+SEEDS = {
+    "map1": [2, 3, 5, 9, 12],
+    "map2": [1, 2, 3, 5, 7, 8, 13, 16],
+    "map3": [1, 2, 4, 8, 9, 10, 15, 21],
+    "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
+    "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
+}
 
 parser = argparse.ArgumentParser(description='RL')
 parser.add_argument(
@@ -39,38 +45,17 @@ parser.add_argument(
     action='store_true',
     default=False,
     help='whether to use a non-deterministic policy')
+parser.add_argument('--map-name', default="map1", help='map name')
 args = parser.parse_args()
 
 args.det = not args.non_det
 # device = torch.device("cuda:0" if args.cuda else "cpu")
 
-env = make_vec_envs(
-    None,
-    args.seed + 15,
-    1,
-    None,
-    None,
-    device="cpu",
-    allow_early_resets=False)
-
-# Get a render function
-render_func = get_render_func(env)
-
 # We need to use the same statistics for normalization as used in training
 actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location="cpu")
 
-vec_norm = get_vec_normalize(env)
-if vec_norm is not None:
-    vec_norm.eval()
-    vec_norm.obs_rms = obs_rms
-
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
-
-obs = env.reset()
-
-if render_func is not None:
-    render_func('human')
 
 if args.env_name.find('Bullet') > -1:
     import pybullet as p
@@ -80,21 +65,45 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
-total_reward = 0
-while True:
-    with torch.no_grad():
-        value, action, _, recurrent_hidden_states = actor_critic.act(
-            obs, recurrent_hidden_states, masks, deterministic=args.det)
+for i in range(len(SEEDS[args.map_name])):
+    env = make_vec_envs(
+        args.map_name,
+        SEEDS[args.map_name][i],
+        1,
+        None,
+        None,
+        device="cpu",
+        allow_early_resets=False)
 
-    print(action)
+    vec_norm = get_vec_normalize(env)
+    if vec_norm is not None:
+        vec_norm.eval()
+        vec_norm.obs_rms = obs_rms
 
-    # Obser reward and next obs
-    obs, reward, done, _ = env.step(action)
-    env.render()
-    total_reward += reward
-    masks.fill_(0.0 if done else 1.0)
+    # Get a render function
+    # render_func = get_render_func(env)
 
-    if done:
-        break
+    obs = env.reset()
 
-print(total_reward)
+    # if render_func is not None:
+    #     render_func('human')
+
+    total_reward = 0
+    while True:
+        with torch.no_grad():
+            value, action, _, recurrent_hidden_states = actor_critic.act(
+                obs, recurrent_hidden_states, masks, deterministic=args.det)
+
+        print(action)
+
+        # Obser reward and next obs
+        obs, reward, done, _ = env.step(action)
+        env.render()
+        total_reward += reward
+        masks.fill_(0.0 if done else 1.0)
+
+        if done:
+            break
+
+    print(total_reward)
+    env.close()
