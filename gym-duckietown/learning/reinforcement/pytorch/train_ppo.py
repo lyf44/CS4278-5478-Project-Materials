@@ -62,7 +62,7 @@ def main(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     print("Initialized envsironments, device = {}".format(device))
-    envs = make_vec_envs(None, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
+    envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
 
     if args.load_model:
         print("loading existing models!!")
@@ -217,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument('--recurrent-policy', action='store_true', default=False, help='use a recurrent policy')
     parser.add_argument('--use-linear-lr-decay', action='store_true', default=True, help='use a linear schedule on the learning rate')
     parser.add_argument('--load-model', default=False, help='load a model')
+    parser.add_argument('--map-name', default="map1", help='map name')
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()

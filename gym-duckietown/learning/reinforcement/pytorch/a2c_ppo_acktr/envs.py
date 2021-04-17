@@ -37,6 +37,14 @@ try:
 except ImportError:
     pass
 
+SEEDS = {
+    "map1": [2, 3, 5, 9, 12],
+    "map2": [1, 2, 3, 5, 7, 8, 13, 16],
+    "map3": [1, 2, 4, 8, 9, 10, 15, 21],
+    "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
+    "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
+}
+
 
 def make_env(env_id, seed, rank, log_dir, allow_early_resets):
     def _thunk():
@@ -85,9 +93,9 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
 
     return _thunk
 
-def make_env_2(i):
+def make_env_2(env_name, seed):
     def _thunk():
-        env = launch_env(seed=i)
+        env = launch_env(env_name, seed)
         env = ResizeWrapper(env)
         env = NormalizeWrapper(env)
         env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
@@ -108,7 +116,7 @@ def make_vec_envs(env_name,
                   num_frame_stack=None):
     envs = [
         # make_env(env_name, seed, i, log_dir, allow_early_resets)
-        make_env_2(seed + i)
+        make_env_2(env_name, seed + SEEDS[env_name][i % len(SEEDS[env_name])])
         for i in range(num_processes)
     ]
 

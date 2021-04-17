@@ -194,6 +194,7 @@ class CNNBase(NNBase):
         self.train()
 
     def forward(self, inputs, rnn_hxs, masks):
+        # print(inputs)
         x = self.main(inputs / 255.0)
 
         if self.is_recurrent:
