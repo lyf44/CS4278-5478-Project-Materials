@@ -32,6 +32,22 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 SEQUENCE_LENGTH = 5
 
+# SEEDS = {
+#     "map1": [2, 3, 5, 9, 12],
+#     "map2": [1, 2, 3, 5, 7, 8, 13, 16],
+#     "map3": [1, 2, 4, 8, 9, 10, 15, 21],
+#     "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
+#     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
+# }
+
+SEEDS = {
+    "map1": [3],
+    "map2": [2 ,5, 7,16],
+    "map3": [8, 10, 15, 21],
+    "map4": [1, 2, 5, 7, 10, 16],
+    "map5": [1, 2, 4, 5, 10, 23]
+}
+
 def main(args):
     if not os.path.exists("./results"):
         os.makedirs("./results")
@@ -63,7 +79,7 @@ def main(args):
 
     print("Initialized envsironments, device = {}".format(device))
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
-    envs = make_vec_envs(args.map_name, 0, args.num_processes, args.gamma, args.log_dir, device, False)
+    envs = make_vec_envs(args.map_name, SEEDS, args.num_processes, args.gamma, args.log_dir, device, False)
 
     if args.load_model:
         print("loading existing models!!")

@@ -37,23 +37,6 @@ try:
 except ImportError:
     pass
 
-# SEEDS = {
-#     "map1": [2, 3, 5, 9, 12],
-#     "map2": [1, 2, 3, 5, 7, 8, 13, 16],
-#     "map3": [1, 2, 4, 8, 9, 10, 15, 21],
-#     "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
-#     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
-# }
-
-SEEDS = {
-    "map1": [3],
-    "map2": [2 ,5, 7,16],
-    "map3": [8, 10, 15, 21],
-    "map4": [1, 2, 5, 7, 10, 16],
-    "map5": [1, 2, 4, 5, 10, 23]
-}
-
-
 def make_env(env_id, seed, rank, log_dir, allow_early_resets):
     def _thunk():
         if env_id.startswith("dm"):
@@ -115,7 +98,7 @@ def make_env_2(env_name, seed):
     return _thunk
 
 def make_vec_envs(env_name,
-                  seed,
+                  seeds,
                   num_processes,
                   gamma,
                   log_dir,
@@ -124,7 +107,7 @@ def make_vec_envs(env_name,
                   num_frame_stack=None):
     envs = [
         # make_env(env_name, seed, i, log_dir, allow_early_resets)
-        make_env_2(env_name, seed + SEEDS[env_name][i % len(SEEDS[env_name])])
+        make_env_2(env_name, seeds[env_name][i % len(seeds[env_name])])
         for i in range(num_processes)
     ]
 
