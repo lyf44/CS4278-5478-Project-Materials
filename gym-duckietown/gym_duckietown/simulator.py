@@ -178,6 +178,8 @@ class Simulator(gym.Env):
         :param distortion: If true, distorts the image with fish-eye approximation
         :param randomize_maps_on_reset: If true, randomizes the map on reset (Slows down training)
         """
+        print("Simulator, map_name: {}, seed: {}".format(map_name, seed))
+
         # first initialize the RNG
         self.seed_value = seed
         self.seed(seed=self.seed_value)

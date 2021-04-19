@@ -77,7 +77,7 @@ failed_seeds = []
 for i in range(len(SEEDS[args.map_name])):
     env = make_vec_envs(
         args.map_name,
-        SEEDS[args.map_name][i],
+        [SEEDS[args.map_name][i]],
         1,
         None,
         None,
@@ -93,13 +93,13 @@ for i in range(len(SEEDS[args.map_name])):
     # render_func = get_render_func(env)
 
     obs = env.reset()
-
+    env.render()
     # if render_func is not None:
     #     render_func('human')
 
     total_reward = 0
     step = 0
-    while step <= 500:
+    while step <= 1500:
         with torch.no_grad():
             value, action, _, recurrent_hidden_states = actor_critic.act(
                 obs, recurrent_hidden_states, masks, deterministic=args.det)

@@ -103,7 +103,6 @@ def update(dt):
 
     obs, reward, done, info = env.step(action)
 
-    print(obs)
     print('step_count = %s, reward=%.3f' % (env.unwrapped.step_count, reward))
 
     if key_handler[key.RETURN]:
