@@ -52,7 +52,7 @@ args.det = not args.non_det
 # device = torch.device("cuda:0" if args.cuda else "cpu")
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + ".pt"), map_location="cpu")
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
@@ -65,6 +65,7 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
+failed_seeds = []
 for i in range(len(SEEDS[args.map_name])):
     env = make_vec_envs(
         args.map_name,
@@ -89,7 +90,8 @@ for i in range(len(SEEDS[args.map_name])):
     #     render_func('human')
 
     total_reward = 0
-    while True:
+    step = 0
+    while step <= 500:
         with torch.no_grad():
             value, action, _, recurrent_hidden_states = actor_critic.act(
                 obs, recurrent_hidden_states, masks, deterministic=args.det)
@@ -103,7 +105,13 @@ for i in range(len(SEEDS[args.map_name])):
         masks.fill_(0.0 if done else 1.0)
 
         if done:
+            print("done!!")
+            failed_seeds.append(SEEDS[args.map_name][i])
             break
+
+        step += 1
 
     print(total_reward)
     env.close()
+
+print(failed_seeds)
