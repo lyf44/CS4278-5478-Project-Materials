@@ -24,6 +24,14 @@ SEEDS = {
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
 
+HARD_SEEDS = {
+    "map1": [3],
+    "map2": [2 ,5, 7,16],
+    "map3": [8, 10, 15, 21],
+    "map4": [1, 2, 5, 7, 10, 16],
+    "map5": [1, 2, 4, 5, 10, 23]
+}
+
 parser = argparse.ArgumentParser(description='RL')
 parser.add_argument(
     '--seed', type=int, default=1, help='random seed (default: 1)')
