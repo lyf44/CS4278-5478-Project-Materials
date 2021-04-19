@@ -97,6 +97,7 @@ def main(args):
     rollouts.to(device)
 
     episode_rewards = deque(maxlen=10)
+    best_reward = -np.inf
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -157,11 +158,20 @@ def main(args):
             except OSError:
                 pass
 
-            torch.save([
-                actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + ".pt"))
-            print("Model saved!!!")
+            mean_reward = np.mean(episode_rewards)
+            if mean_reward > best_reward:
+                best_reward = mean_reward
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+                ], os.path.join(save_path, args.env_name + "_best.pt"))
+                print("Best Model saved!!!")
+            else:
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+                ], os.path.join(save_path, args.env_name + ".pt"))
+                print("Model saved!!!")
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
@@ -201,14 +211,14 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
     parser.add_argument('--cuda-deterministic', action='store_true', default=False, help="sets flags for determinism when using CUDA (potentially slow!)")
     parser.add_argument('--num-processes', type=int, default=16, help='how many training CPU processes to use (default: 16)')
-    parser.add_argument('--num-steps', type=int,  default=128, help='number of forward steps in A2C (default: 5)')
+    parser.add_argument('--num-steps', type=int,  default=32, help='number of forward steps in A2C (default: 5)')
     parser.add_argument('--ppo-epoch', type=int, default=4, help='number of ppo epochs (default: 4)')
     parser.add_argument('--num-mini-batch', type=int, default=32, help='number of batches for ppo (default: 32)')
     parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
     parser.add_argument('--log-interval', type=int, default=10, help='log interval, one log per n updates (default: 10)')
     parser.add_argument('--save-interval', type=int, default=100, help='save interval, one save per n updates (default: 100)')
     parser.add_argument('--eval-interval', type=int, default=None, help='eval interval, one eval per n updates (default: None)')
-    parser.add_argument('--num-env-steps', type=int, default=10e6, help='number of environment steps to train (default: 10e6)')
+    parser.add_argument('--num-env-steps', type=int, default=5e6, help='number of environment steps to train (default: 10e6)')
     parser.add_argument('--env-name', default='duckietown', help='environment to train on (default: PongNoFrameskip-v4)')
     parser.add_argument('--log-dir', default='./reinforcement/pytorch/log/', help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--save-dir', default='./reinforcement/pytorch/trained_models/', help='directory to save agent logs (default: ./trained_models/)')

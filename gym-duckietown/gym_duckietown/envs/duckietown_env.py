@@ -77,8 +77,17 @@ class DuckietownEnv(Simulator):
 
         obs, reward, done, info = Simulator.step(self, vels)
 
+        # reward shaping
+        if reward == -1000:
+            reward = -10 # -40
+        elif reward > 0:
+            reward += 10
+            # reward *= 5
+        else:
+            reward += 4
+
         if math.fabs(action[0]) < 0.01:
-            reward = -10
+            reward = 0
 
         self.episode_reward += reward
 
