@@ -62,7 +62,8 @@ def main(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     print("Initialized envsironments, device = {}".format(device))
-    envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
+    # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
+    envs = make_vec_envs(args.map_name, 0, args.num_processes, args.gamma, args.log_dir, device, False)
 
     if args.load_model:
         print("loading existing models!!")

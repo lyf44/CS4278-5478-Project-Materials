@@ -128,6 +128,14 @@ def make_vec_envs(env_name,
         for i in range(num_processes)
     ]
 
+    # i = 0
+    # envs = []
+    # while i < len(num_processes):
+    #     for env_name in SEEDS:
+    #         for seed in SEEDS[env_name]:
+    #             envs.append(make_env_2(env_name, seed))
+    #             i += 1
+
     if len(envs) > 1:
         envs = SubprocVecEnv(envs)
     else:
