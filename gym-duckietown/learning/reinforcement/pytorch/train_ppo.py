@@ -40,13 +40,13 @@ SEEDS = {
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
 
-# SEEDS = {
-#     "map1": [3],
-#     "map2": [2 ,5, 7,16],
-#     "map3": [8, 10, 15, 21],
-#     "map4": [1, 2, 5, 7, 10, 16],
-#     "map5": [2, 8, 16]
-# }
+HARD_SEEDS = {
+    "map1": [],
+    "map2": [1, 2, 3, 7, 13],
+    "map3": [8],
+    "map4": [2, 4, 7],
+    "map5": [2, 8, 16]
+}
 
 def main(args):
     if not os.path.exists("./results"):
@@ -77,9 +77,10 @@ def main(args):
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    print("Initialized envsironments, device = {}".format(device))
+    print("Initialized environments, device = {}".format(device))
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
-    envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False)
+    envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False, 
+        hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=True)
 
     if args.load_model:
         print("loading existing models!!")

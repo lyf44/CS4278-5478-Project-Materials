@@ -104,11 +104,21 @@ def make_vec_envs(env_name,
                   log_dir,
                   device,
                   allow_early_resets,
-                  num_frame_stack=None):
-    envs = [
-        # make_env(env_name, seed, i, log_dir, allow_early_resets)
-        make_env_2(env_name, seeds[i % len(seeds)]) for i in range(num_processes)
-    ]
+                  num_frame_stack=None,
+                  hard_seeds = [],
+                  use_hard_seed = False):
+    if not use_hard_seed:
+        envs = [
+            # make_env(env_name, seed, i, log_dir, allow_early_resets)
+            make_env_2(env_name, seeds[i % len(seeds)]) for i in range(num_processes)
+        ]
+    else:
+        envs = []
+        for i in range(num_processes):
+            if i <= num_processes * 0.2:
+                envs.append(make_env_2(env_name, seeds[i % len(seeds)]))
+            else:
+                envs.append(make_env_2(env_name, hard_seeds[i % len(seeds)]))
 
     # i = 0
     # envs = []
