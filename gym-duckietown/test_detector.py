@@ -86,6 +86,40 @@ def on_key_press(symbol, modifiers):
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
 
+def _update_pos(pos, angle, wheel_dist, wheelVels, deltaTime):
+    """
+    pose prediction model from env setup
+    """
+
+    Vl, Vr = wheelVels
+    l = wheel_dist
+
+    # If the wheel velocities are the same, then there is no rotation
+    if Vl == Vr:
+        pos = pos + deltaTime * Vl * get_dir_vec(angle)
+        return pos, angle
+
+    # Compute the angular rotation velocity about the ICC (center of curvature)
+    w = (Vr - Vl) / l
+
+    # Compute the distance to the center of curvature
+    r = (l * (Vl + Vr)) / (2 * (Vl - Vr))
+
+    # Compute the rotation angle for this time step
+    rotAngle = w * deltaTime
+
+    # Rotate the robot's position around the center of rotation
+    r_vec = get_right_vec(angle)
+    px, py, pz = pos
+    cx = px + r * r_vec[0]
+    cz = pz + r * r_vec[2]
+    npx, npz = rotate_point(px, pz, cx, cz, rotAngle)
+    pos = np.array([npx, py, npz])
+
+    # Update the robot's direction angle
+    angle += rotAngle
+    return pos, angle
+
 def update(dt, obs):
     """
     This function is called at every frame to handle
@@ -114,7 +148,7 @@ def update(dt, obs):
     obs, reward, done, info = env.step(action)
     # print(obs)
     obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.07)
+    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.08)
     if len(tags) != 0:
         d = np.linalg.norm(np.array(tags[0].pose_t))
         # print(d)
