@@ -84,7 +84,7 @@ def main(args):
 
     if args.load_model:
         print("loading existing models!!")
-        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + ".pt"))
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + "_" + args.map_name + "_v2.pt"))
     else:
         actor_critic = Policy(
             envs.observation_space.shape,
