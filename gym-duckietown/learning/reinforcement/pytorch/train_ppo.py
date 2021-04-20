@@ -45,7 +45,7 @@ SEEDS = {
 #     "map2": [2 ,5, 7,16],
 #     "map3": [8, 10, 15, 21],
 #     "map4": [1, 2, 5, 7, 10, 16],
-#     "map5": [1, 2, 4, 5, 10, 23]
+#     "map5": [2, 8, 16]
 # }
 
 def main(args):
@@ -168,27 +168,28 @@ def main(args):
         rollouts.after_update()
 
         # save for every interval-th episode or for the last epoch
-        if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, args.algo)
-            try:
-                os.makedirs(save_path)
-            except OSError:
-                pass
+        # if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
+        save_path = os.path.join(args.save_dir, args.algo)
+        try:
+            os.makedirs(save_path)
+        except OSError:
+            pass
 
-            mean_reward = np.mean(episode_rewards)
-            if mean_reward > best_reward:
-                best_reward = mean_reward
-                torch.save([
-                    actor_critic,
-                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-                ], os.path.join(save_path, args.env_name + "_best.pt"))
-                print("Best Model saved!!!")
-            else:
-                torch.save([
-                    actor_critic,
-                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-                ], os.path.join(save_path, args.env_name + ".pt"))
-                print("Model saved!!!")
+        min_reward = np.min(episode_rewards) if len(episode_rewards) > 0 else -np.inf
+        if min_reward > best_reward:
+            best_reward = min_reward
+            torch.save([
+                actor_critic,
+                getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+            ], os.path.join(save_path, args.env_name + "_best.pt"))
+            print("Best Model saved!!!, min_reward = {}".format(min_reward))
+            
+        if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
+            torch.save([
+                actor_critic,
+                getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+            ], os.path.join(save_path, args.env_name + ".pt"))
+            print("Model saved!!!")
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
