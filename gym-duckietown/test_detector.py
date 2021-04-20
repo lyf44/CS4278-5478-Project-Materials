@@ -18,6 +18,7 @@ from gym_duckietown.wrappers import UndistortWrapper
 from dt_apriltags import Detector
 import cv2
 from learning.imitation.iil_dagger.teacher import PurePursuitPolicy 
+import math
 
 # from experiments.utils import save_img
 
@@ -85,6 +86,15 @@ def on_key_press(symbol, modifiers):
 # Register a keyboard handler
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
+
+def get_dir_vec(cur_angle):
+    """
+    Vector pointing in the direction the agent is looking
+    """
+
+    x = math.cos(cur_angle)
+    z = -math.sin(cur_angle)
+    return np.array([x, 0, z])
 
 def _update_pos(pos, angle, wheel_dist, wheelVels, deltaTime):
     """
