@@ -25,11 +25,11 @@ SEEDS = {
 }
 
 HARD_SEEDS = {
-    "map1": [3],
-    "map2": [2 ,5, 7,16],
-    "map3": [8, 10, 15, 21],
-    "map4": [1, 2, 5, 7, 10, 16],
-    "map5": [1, 2, 4, 5, 10, 23]
+    "map1": [],
+    "map2": [1, 2, 3, 7, 13],
+    "map3": [8],
+    "map4": [2, 4, 7],
+    "map5": [2, 8, 16]
 }
 
 parser = argparse.ArgumentParser(description='RL')
@@ -99,7 +99,7 @@ for i in range(len(SEEDS[args.map_name])):
 
     total_reward = 0
     step = 0
-    while step <= 1500:
+    while step <= 500: # 1500
         with torch.no_grad():
             value, action, _, recurrent_hidden_states = actor_critic.act(
                 obs, recurrent_hidden_states, masks, deterministic=args.det)
