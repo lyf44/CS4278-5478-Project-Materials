@@ -102,6 +102,7 @@ class DuckietownEnv(Simulator):
 
         if done:
             info['episode_reward'] = self.episode_reward
+            info['seed_val'] = self.seed_value
             self.episode_reward = 0
 
         return obs, reward, done, info

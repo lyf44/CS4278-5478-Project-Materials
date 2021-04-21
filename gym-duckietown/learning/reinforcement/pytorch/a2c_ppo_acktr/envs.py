@@ -113,12 +113,13 @@ def make_vec_envs(env_name,
             make_env_2(env_name, seeds[i % len(seeds)]) for i in range(num_processes)
         ]
     else:
+        print("fine tune on hard seed!!!")
         envs = []
         for i in range(num_processes):
             if i <= num_processes * 0.2:
                 envs.append(make_env_2(env_name, seeds[i % len(seeds)]))
             else:
-                envs.append(make_env_2(env_name, hard_seeds[i % len(seeds)]))
+                envs.append(make_env_2(env_name, hard_seeds[i % len(hard_seeds)]))
 
     # i = 0
     # envs = []
