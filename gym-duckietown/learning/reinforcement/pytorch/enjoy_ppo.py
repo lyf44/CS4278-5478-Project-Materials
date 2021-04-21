@@ -27,7 +27,15 @@ HARD_SEEDS = {
     "map2": [1, 2, 3, 7, 13],
     "map3": [8],
     "map4": [2, 4, 7],
-    "map5": [2, 8, 16]
+    "map5": [2, 8, 9, 16]
+}
+
+HARD_SEEDS_2 = {
+    "map1": [],
+    "map2": [2],
+    "map3": [8, 15],
+    "map4": [2, 4, 7],
+    "map5": []
 }
 
 parser = argparse.ArgumentParser(description='RL')
@@ -107,10 +115,10 @@ for i in range(len(SEEDS[args.map_name])):
         # Obser reward and next obs
         obs, reward, done, _ = env.step(action)
         env.render()
-        total_reward += reward
+        total_reward += reward[0][0].item()
         masks.fill_(0.0 if done else 1.0)
 
-        if done:
+        if done[0]:
             print("done!!")
             failed_seeds.append(SEEDS[args.map_name][i])
             break

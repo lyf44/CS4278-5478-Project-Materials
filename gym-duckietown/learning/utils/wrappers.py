@@ -72,8 +72,8 @@ class ImgWrapper(gym.ObservationWrapper):
         # print(np.max(obs))
         obs = cv2.resize(obs, (self.shape[:2]))
         obs_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
-        cv2.imshow("img", obs_bgr)
-        cv2.waitKey(1)
+        # cv2.imshow("img", obs_bgr)
+        # cv2.waitKey(1)
         obs = obs.transpose(2, 0, 1) # 3x64x64
         # obs = observation.transpose(2,0,1)
         # print(obs.shape)
