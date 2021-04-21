@@ -62,7 +62,7 @@ if args.env_name and args.env_name.find('Duckietown') != -1:
 else:
     env = gym.make(args.env_name)
 
-expert = PurePursuitPolicy(env, ref_velocity=0.5)
+expert = PurePursuitPolicy(env, ref_velocity=0.7)
 obs = env.reset()
 env.render()
 # obs = env.reset()
@@ -204,9 +204,9 @@ def update(dt, obs):
         
         expert.estimated_pose, expert.estimated_angle = _update_pos(expert.estimated_pose, expert.estimated_angle, WHEEL_DIST, wheelvels, dt)
         if expert.estimated_angle < 0:
-            expert.estimated_angle =+ 2*math.pi
-        elif expert.estimated_angle > 2 * math.pi:
-            expert.estimated_angle -= 2 * math.pi
+            expert.estimated_angle += 2.0 *math.pi
+        elif expert.estimated_angle > 2.0 * math.pi:
+            expert.estimated_angle -= 2.0 * math.pi
         d = math.sqrt(expert.estimated_pose[0]**2 + expert.estimated_pose[2]**2)
         pos = env.cur_pos
         dist_to_stop = []
@@ -220,12 +220,12 @@ def update(dt, obs):
         if d <= 0.6:
         # print("pose: {}, angle: {}".format(expert.estimated_pose, expert.estimated_angle))
         # print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
-            print(dist_to_stop)
-            # print("stop region estimation error: {}".format(min(abs_dist)))
+            # print(dist_to_stop)
+            print("stop region estimation error: {}".format(min(abs_dist)))
     obs, reward, done, info = env.step(action)
     # print(obs)
     obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.075)
+    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.05)
     if len(tags) != 0:
         tmp_dist = 1000.0
         idx = None
@@ -236,16 +236,20 @@ def update(dt, obs):
                 tmp_dist = math.sqrt(t[0] ** 2 + t[2] ** 2) 
                 idx = i
         t = np.array(tags[idx].pose_t)
+        # print(t)
         expert.estimated_pose = [-t[2], t[1], -t[0]]
         R = np.array(tags[idx].pose_R)
             
         # theta_x = math.atan2(R[2,1], R[2,2])
         # theta_y = math.atan2(-R[2,0], math.sqrt(R[2,1]**2 + R[2,2]**2))
-        expert.estimated_angle = math.atan2(R[1,0], R[0,0])
+        expert.estimated_angle = - math.atan2(R[1,0], R[0,0])
+        # print(expert.estimated_angle)
         if expert.estimated_angle < 0:
-            expert.estimated_angle =+ 2*math.pi
-        elif expert.estimated_angle > 2 * math.pi:
-            expert.estimated_angle -= 2 * math.pi
+            expert.estimated_angle += 2.0 *math.pi
+        elif expert.estimated_angle > 2.0 * math.pi:
+            expert.estimated_angle -= 2.0 * math.pi
+
+        # print(expert.estimated_angle)
         # print("x: {}, y: {}, z: {}".format(abs(theta_x-env.cur_angle), abs(theta_y-env.cur_angle), abs(theta_y-env.cur_angle)))
         # print("theta_z: {:.3f}".format(theta_z))
         d = math.sqrt(t[0]**2 + t[2]**2)
