@@ -2,7 +2,6 @@ import cv2
 from dt_apriltags import Detector
 import math
 import numpy as np
-
 from scipy.spatial.transform import Rotation as R
 
 at_detector = Detector(families='tag36h11',
@@ -32,7 +31,7 @@ def detect_stopsign(obs):
         t = np.array(tags[idx].pose_t)
 
         pos_ss_r = [t[2][0], -t[0][0], 0]
-        print("et_pos_ss_r:", pos_ss_r) # tag's pose relative to camera
+        # print("et_pos_ss_r:", pos_ss_r) # tag's pose relative to camera
 
         return pos_ss_r
     else:
@@ -70,4 +69,6 @@ def detect_stopsign_gt(env, et_pos_ss_r):
 
     V_pos_ss_m = np.array([gt_pos_ss_m[0], gt_pos_ss_m[1], 0, 1])
     V_pos_ss_r = np.dot(np.linalg.inv(T_m_r) , V_pos_ss_m)
-    print("gt_pos_ss_r:", V_pos_ss_r[:3])
+    # print("gt_pos_ss_r:", V_pos_ss_r[:3])
+
+    return V_pos_ss_r[:3]

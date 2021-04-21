@@ -30,7 +30,6 @@ STD_X = 0.02
 STD_Y = 0.03
 NUM_PARTICLES = 100
 NUM_RANDOM_PARTICLES = 10
-CLAMP_SPEED_DIST = 0.35 # allow some error
 
 # declare the arguments
 parser = argparse.ArgumentParser()
@@ -71,63 +70,61 @@ env = DuckietownEnv(
 obs = env.reset()
 env.render()
 
-pf = None
 total_reward = 0
 rl_total_reward = 0
 step = 0
 gt_pos_ss = None
+prev_pos = env.cur_pos
+prev_angle = env.cur_angle
 while step < args.max_steps:
     with torch.no_grad():
         value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks)
 
-    obs = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
-    # print(obs.shape)
-    # cv2.imshow("obs_np", obs)
-    # cv2.waitKey(1)
+    # obs = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
+    # # print(obs.shape)
+    # # cv2.imshow("obs_np", obs)
+    # # cv2.waitKey(1)
 
-    pos_ss_r = ss_detector.detect_stopsign(obs)
-    if pos_ss_r is not None:
-        pos_ss_r[0] += MEAN_X
-        # pos_ss_r[1] += MEAN_Y
-        dist_to_ss = math.sqrt(pos_ss_r[0] ** 2 + pos_ss_r[1] ** 2)
+    # pos_ss_r = ss_detector.detect_stopsign(obs)
+    # if pos_ss_r is not None:
+    #     pos_ss_r[0] += MEAN_X
+    #     # pos_ss_r[1] += MEAN_Y
+    #     dist_to_ss = math.sqrt(pos_ss_r[0] ** 2 + pos_ss_r[1] ** 2)
 
-        if dist_to_ss < 1.2:
-            if pf is None:
-                print("-----------Stop sign detected, start tracking!!!")
-                initial_particles_x = np.random.normal(pos_ss_r[0], STD_X, NUM_PARTICLES).reshape(-1, 1)
-                initial_particles_y = np.random.normal(pos_ss_r[1], STD_Y, NUM_PARTICLES).reshape(-1, 1)
-                initial_particles = np.concatenate((initial_particles_x, initial_particles_y), axis=1)
-                print(initial_particles.shape)
-                pf = ParticleFilter(initial_particles, duckietown_model.transit_state, duckietown_model.measurement_prob)
-            else:
-                print("----------Stop sign detected, pf update!!!")
-                ss_pos = pf.get_estimate()
-                print("predict: {}, meas: {}".format(ss_pos, pos_ss_r), end=" ")
-                pf.update(pos_ss_r)
+    #     if dist_to_ss < 1.2:
+    #         if pf is None:
+    #             print("-----------Stop sign detected, start tracking!!!")
+    #             initial_particles_x = np.random.normal(pos_ss_r[0], STD_X, NUM_PARTICLES).reshape(-1, 1)
+    #             initial_particles_y = np.random.normal(pos_ss_r[1], STD_Y, NUM_PARTICLES).reshape(-1, 1)
+    #             initial_particles = np.concatenate((initial_particles_x, initial_particles_y), axis=1)
+    #             print(initial_particles.shape)
+    #             pf = ParticleFilter(initial_particles, duckietown_model.transit_state, duckietown_model.measurement_prob)
+    #         else:
+    #             print("----------Stop sign detected, pf update!!!")
+    #             ss_pos = pf.get_estimate()
+    #             print("predict: {}, meas: {}".format(ss_pos, pos_ss_r), end=" ")
+    #             pf.update(pos_ss_r)
 
-    if pf is not None:
-        ss_pos = pf.get_estimate()
-        dist_to_ss = math.sqrt(ss_pos[0] ** 2 + ss_pos[1] ** 2)
+    # if pf is not None:
+    #     ss_pos = pf.get_estimate()
+    #     gt_pos_ss = ss_detector.detect_stopsign_gt(env, ss_pos)
+    #     print("pf estimate: {}, gt: {}".format(ss_pos, gt_pos_ss))
+    #     dist_to_ss = math.sqrt(ss_pos[0] ** 2 + ss_pos[1] ** 2)
+    #     print(dist_to_ss)
 
-        gt_pos_ss = ss_detector.detect_stopsign_gt(env, ss_pos)
-        gt_dist_to_ss = math.sqrt(gt_pos_ss[0] ** 2 + gt_pos_ss[1] ** 2)
+    #     # to prevent particle collapse
+    #     random_particles_x = np.random.normal(ss_pos[0], 0.5, NUM_RANDOM_PARTICLES).reshape(-1, 1)
+    #     random_particles_y = np.random.normal(ss_pos[1], 0.5, NUM_RANDOM_PARTICLES).reshape(-1, 1)
+    #     random_particles = np.concatenate((random_particles_x, random_particles_x), axis=1)
+    #     pf.add_random_samples(random_particles)
 
-        print("pf estimate: {}, gt: {}".format(ss_pos, gt_pos_ss))
-        print("pf estimate: {}, gt: {}".format(dist_to_ss, gt_dist_to_ss))
+    #     if dist_to_ss < 0.3:
+    #         print("----------Close to stop sign, clamp speed to 0.15!!!")
+    #         rl_action[0][0] = 0.15
 
-        # to prevent particle collapse
-        random_particles_x = np.random.normal(ss_pos[0], 0.5, NUM_RANDOM_PARTICLES).reshape(-1, 1)
-        random_particles_y = np.random.normal(ss_pos[1], 0.5, NUM_RANDOM_PARTICLES).reshape(-1, 1)
-        random_particles = np.concatenate((random_particles_x, random_particles_x), axis=1)
-        pf.add_random_samples(random_particles)
-
-        if dist_to_ss <= CLAMP_SPEED_DIST:
-            print("----------Close to stop sign, clamp speed to 0.15m/s!!!")
-            rl_action[0][0] = 0.1 # because default simulator speed is 1.2!!
-
-        if dist_to_ss >= 1.2:
-            print("-----------Too far from stop sign, stop tracking!!!")
-            pf = None
+    #     if dist_to_ss >= 1.2:
+    #         print("-----------Too far from stop sign, stop tracking!!!")
+    #         pf = None
 
     rl_obs, rl_reward, done, info = rl_env.step(rl_action)
     masks.fill_(0.0 if done[0] else 1.0)
@@ -136,6 +133,7 @@ while step < args.max_steps:
     action[0] = max(min(action[0], 0.8), 0)
     action[1] = max(min(action[1], 1), -1)
     # print(action)
+
     obs, reward, done, info = env.step(action)
 
     rl_total_reward += rl_reward[0][0].item()
@@ -143,8 +141,16 @@ while step < args.max_steps:
 
     # print('Steps = %s, Timestep Reward=%.3f, rl_total_reward=%.3f, Total Reward=%.3f' % (step, reward, rl_total_reward, total_reward))
 
-    if pf is not None:
-        pf.predict(action)
+    # if pf is not None:
+    #     pf.predict(action)
+
+    et_pos, et_angle = duckietown_model.forward_model(prev_pos, prev_angle, action)
+    gt_pos = env.cur_pos
+    gt_angle = env.cur_angle
+    print("et_pos: {}, et_angle: {}".format(et_pos, et_angle))
+    print("gt_pos: {}, gt_angle: {}".format(gt_pos, gt_angle))
+    prev_pos = et_pos
+    prev_angle = et_angle
 
     env.render()
     step += 1
