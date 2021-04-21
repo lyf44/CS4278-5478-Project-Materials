@@ -16,7 +16,7 @@ class PurePursuitPolicy:
     -------
     forward(images)
         makes a model forward pass on input images
-    
+
     loss(*args)
         takes images and target action to compute the loss function used in optimization
 
@@ -61,7 +61,7 @@ class PurePursuitPolicy:
         # in case of training LFV baseline
         velocity_slow_down = 1
         for obj in current_world_objects:
-            if not obj.static and obj.kind == "duckiebot": 
+            if not obj.static and obj.kind == "duckiebot":
                 if True:
                     collision_penalty =  abs(obj.proximity(self.env.cur_pos, AGENT_SAFETY_RAD * AGENT_SAFETY_GAIN))
                     if collision_penalty > 0 :
@@ -91,7 +91,7 @@ class PurePursuitPolicy:
         dot = np.dot(right_vec, point_vec)
         omega = -1 * dot
         # range of dot is just -pi/2 and pi/2 and will be multiplied later by a gain adjustable if we are testing on a hardware or not
-        velocity = self.ref_velocity  * velocity_scale 
+        velocity = self.ref_velocity  * velocity_scale
         if velocity_slow_down<0.2:
             velocity = 0
             omega = 0
@@ -99,7 +99,7 @@ class PurePursuitPolicy:
         action = [velocity , omega]
 
         return action
-    
+
 
     def _get_projected_angle_difference(self, lookup_distance):
         # Find the projection along the path

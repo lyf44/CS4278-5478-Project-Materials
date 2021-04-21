@@ -14,8 +14,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__)))
 from .a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
 from .a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
 
-sys.path.append('a2c_ppo_acktr')
-
 SEEDS = {
     "map1": [2, 3, 5, 9, 12],
     "map2": [1, 2, 3, 5, 7, 8, 13, 16],
@@ -60,7 +58,7 @@ args.det = not args.non_det
 # device = torch.device("cuda:0" if args.cuda else "cpu")
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + ".pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v3.pt"), map_location="cpu")
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)

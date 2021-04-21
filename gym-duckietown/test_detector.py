@@ -17,7 +17,7 @@ from gym_duckietown.envs import DuckietownEnv
 from gym_duckietown.wrappers import UndistortWrapper
 from dt_apriltags import Detector
 import cv2
-from learning.imitation.iil_dagger.teacher import PurePursuitPolicy 
+from learning.imitation.iil_dagger.teacher import PurePursuitPolicy
 import math
 
 WHEEL_DIST = 0.102
@@ -31,7 +31,7 @@ LIMIT = 1.0
 # from experiments.utils import save_img
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--env-name', default=None)
+parser.add_argument('--env-name', default="Duckietown-udem1-v0")
 parser.add_argument('--map-name', default='udem1')
 parser.add_argument('--distortion', default=True, action='store_true')
 parser.add_argument('--draw-curve', action='store_true', help='draw the lane following curve')
@@ -201,7 +201,7 @@ def update(dt, obs):
     wheelvels = np.array(action_to_command(action) * DEFAULT_ROBOT_SPEED * 1)
     # pose = _update_pos(pos, angle, WHEEL_DIST, wheelvels, dt)
     if expert.estimated_angle is not None and expert.estimated_pose is not None:
-        
+
         expert.estimated_pose, expert.estimated_angle = _update_pos(expert.estimated_pose, expert.estimated_angle, WHEEL_DIST, wheelvels, dt)
         if expert.estimated_angle < 0:
             expert.estimated_angle += 2.0 *math.pi
@@ -234,13 +234,13 @@ def update(dt, obs):
         for i in range(len(tags)):
             t = np.array(tags[i].pose_t)
             if math.sqrt(t[0] ** 2 + t[2] ** 2) < tmp_dist:
-                tmp_dist = math.sqrt(t[0] ** 2 + t[2] ** 2) 
+                tmp_dist = math.sqrt(t[0] ** 2 + t[2] ** 2)
                 idx = i
         t = np.array(tags[idx].pose_t)
         # print(t)
         expert.estimated_pose = [-t[2], t[1], -t[0]]
         R = np.array(tags[idx].pose_R)
-            
+
         # theta_x = math.atan2(R[2,1], R[2,2])
         # theta_y = math.atan2(-R[2,0], math.sqrt(R[2,1]**2 + R[2,2]**2))
         expert.estimated_angle = - math.atan2(R[1,0], R[0,0])
@@ -265,7 +265,7 @@ def update(dt, obs):
         abs_dist = [abs(dist_to_stop[0] - d), abs(dist_to_stop[1] - d), abs(dist_to_stop[2] - d)]
 
         # print("pose: {}, angle: {}".format(expert.estimated_pose, expert.estimated_angle))
-        # print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
+        print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
         # print("estimation error: {}".format(tags[0].pose_err))
     # print('step_count = %s, reward=%.3f' % (env.unwrapped.step_count, reward))
 
@@ -279,7 +279,7 @@ def update(dt, obs):
         print('done!')
         obs = env.reset()
         env.render()
-        
+
 
     env.render()
 
