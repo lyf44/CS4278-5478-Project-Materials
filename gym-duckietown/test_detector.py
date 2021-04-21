@@ -212,20 +212,21 @@ def update(dt, obs):
         dist_to_stop = []
         for obj in env.objects:
             if obj.kind == "sign_stop":
+                # print(obj.scale)
                 dist_to_stop.append(((pos[0] - obj.pos[0]) ** 2 + (pos[2] - obj.pos[2]) ** 2) ** 0.5)
         # print("predicted distance: {:.3f}, real distance: {}".format(d, dist_to_stop))
         abs_dist = [abs(dist_to_stop[0] - d), abs(dist_to_stop[1] - d), abs(dist_to_stop[2] - d)]
         # print(min(dist_to_stop))
-        # print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
-        if d <= 0.6:
+        print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
+        # if d <= 0.6:
         # print("pose: {}, angle: {}".format(expert.estimated_pose, expert.estimated_angle))
         # print("estimated distance: {}, real_distance: {}".format(d, min(dist_to_stop)))
             # print(dist_to_stop)
-            print("stop region estimation error: {}".format(min(abs_dist)))
+            # print("stop region estimation error: {}".format(min(abs_dist)))
     obs, reward, done, info = env.step(action)
     # print(obs)
     obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.05)
+    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.06822)
     if len(tags) != 0:
         tmp_dist = 1000.0
         idx = None
