@@ -45,7 +45,7 @@ HARD_SEEDS = {
     "map2": [1, 2, 3, 7, 13],
     "map3": [8],
     "map4": [2, 4, 7],
-    "map5": [2, 8, 16]
+    "map5": [2, 8, 9, 16]
 }
 
 def main(args):
@@ -115,6 +115,7 @@ def main(args):
     rollouts.to(device)
 
     episode_rewards = deque(maxlen=10)
+    seeds_rewards = [0] * len(SEEDS[args.map_name])
     best_reward = -np.inf
 
     start = time.time()
@@ -147,6 +148,10 @@ def main(args):
             for info in infos:
                 if 'episode_reward' in info.keys():
                     episode_rewards.append(info['episode_reward'])
+            for i, done_ in enumerate(done):
+                if done_:
+                    idx = SEEDS[args.map_name].index(infos[i]["seed_val"])
+                    seeds_rewards[idx] = infos[i]['episode_reward']
 
             # If done then clean the history of observations.store_true
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
@@ -176,7 +181,7 @@ def main(args):
         except OSError:
             pass
 
-        min_reward = np.min(episode_rewards) if len(episode_rewards) > 0 else -np.inf
+        min_reward = np.min(seeds_rewards) if len(seeds_rewards) > 0 else -np.inf
         if min_reward > best_reward:
             best_reward = min_reward
             torch.save([
@@ -218,7 +223,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RL')
     parser.add_argument('--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument('--gail', action='store_true', default=False, help='do imitation learning with gail')
-    parser.add_argument('--lr', type=float, default=2.5e-4, help='learning rate (default: 7e-4)')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 7e-4)')
     parser.add_argument('--eps', type=float, default=1e-5, help='RMSprop optimizer epsilon (default: 1e-5)')
     parser.add_argument('--alpha', type=float, default=0.99, help='RMSprop optimizer apha (default: 0.99)')
     parser.add_argument('--gamma', type=float, default=0.99,help='discount factor for rewards (default: 0.99)')
