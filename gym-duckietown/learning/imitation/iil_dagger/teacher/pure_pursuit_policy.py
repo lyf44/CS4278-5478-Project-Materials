@@ -78,7 +78,7 @@ class PurePursuitPolicy:
         current_tile = self.env._get_tile(*current_tile_pos)
         if 'curve' in current_tile['kind'] or abs(projected_angle) < 0.92:
             # slowing down by a scale of 0.5
-            velocity_scale = 0.5
+            velocity_scale = 0.25
         _, closest_point, curve_point= self._get_projected_angle_difference(lookup_distance)
 
         if closest_point is None:  # if cannot find a curve point in max iterations
