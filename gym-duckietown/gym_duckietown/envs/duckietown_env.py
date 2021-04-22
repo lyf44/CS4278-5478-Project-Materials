@@ -79,7 +79,7 @@ class DuckietownEnv(Simulator):
 
         # reward shaping
         if reward == -1000:
-            reward = -10 # -40
+            reward = -100 # -40
         elif reward > 0:
             reward += 10
             # reward *= 5

@@ -59,7 +59,8 @@ args = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"), map_location="cpu")
+# actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"))
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
@@ -72,19 +73,17 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
-# use hard seeds
-if args.hard:
-    SEEDS = HARD_SEEDS
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 failed_seeds = []
-for i in range(len(SEEDS[args.map_name])):
+for i in range(len(HARD_SEEDS[args.map_name])):
     env = make_vec_envs(
         args.map_name,
-        [SEEDS[args.map_name][i]],
+        [HARD_SEEDS[args.map_name][i]],
         1,
         None,
         None,
-        device="cpu",
+        device=device,
         allow_early_resets=False)
 
     # vec_norm = get_vec_normalize(env)
@@ -117,7 +116,7 @@ for i in range(len(SEEDS[args.map_name])):
 
         if done[0]:
             print("done!!")
-            failed_seeds.append(SEEDS[args.map_name][i])
+            failed_seeds.append(HARD_SEEDS[args.map_name][i])
             break
 
         step += 1
