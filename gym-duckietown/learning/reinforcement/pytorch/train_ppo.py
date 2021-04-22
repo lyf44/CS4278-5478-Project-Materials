@@ -23,7 +23,6 @@ from .a2c_ppo_acktr.arguments import get_args
 from .a2c_ppo_acktr.envs import make_vec_envs
 from .a2c_ppo_acktr.model import Policy
 from .a2c_ppo_acktr.storage import RolloutStorage
-from .evaluation_ppo import evaluate
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter('runs/ppo')
@@ -42,11 +41,53 @@ SEEDS = {
 
 HARD_SEEDS = {
     "map1": [],
-    "map2": [1, 2, 3, 7, 13],
+    "map2": [2],
     "map3": [8],
     "map4": [2, 4, 7],
     "map5": [2, 8, 9, 16]
 }
+
+def evaluate(actor_critic, eval_envs, args, num_processes, eval_log_dir, device):
+    vec_norm = utils.get_vec_normalize(eval_envs)
+    if vec_norm is not None:
+        vec_norm.eval()
+        vec_norm.obs_rms = obs_rms
+
+    eval_episode_rewards = []
+
+    obs = eval_envs.reset()
+    eval_recurrent_hidden_states = torch.zeros(
+        num_processes, actor_critic.recurrent_hidden_state_size, device=device)
+    eval_masks = torch.zeros(num_processes, 1, device=device)
+
+    steps = 0
+    while len(eval_episode_rewards) < 10 and steps <= 1500:
+        with torch.no_grad():
+            _, action, _, eval_recurrent_hidden_states = actor_critic.act(
+                obs,
+                eval_recurrent_hidden_states,
+                eval_masks,
+                deterministic=True)
+
+        # Obser reward and next obs
+        obs, _, done, infos = eval_envs.step(action)
+        eval_masks = torch.tensor(
+            [[0.0] if done_ else [1.0] for done_ in done],
+            dtype=torch.float32,
+            device=device)
+
+        for info in infos:
+            if 'episode_reward' in info.keys():
+                eval_episode_rewards.append(info['episode_reward'])
+
+        steps += 1
+
+    # eval_envs.close()sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+
+    print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
+        len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
+    
+    return np.min(eval_episode_rewards)
 
 def main(args):
     if not os.path.exists("./results"):
@@ -81,10 +122,11 @@ def main(args):
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
     envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False, 
         hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=True)
+    eval_envs = make_vec_envs(args.map_name, HARD_SEEDS[args.map_name], len(HARD_SEEDS[args.map_name]), args.gamma, eval_log_dir, device, True)
 
     if args.load_model:
         print("loading existing models!!")
-        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + "_" + args.map_name + "_v2.pt"))
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + "_" + args.map_name + ".pt"))
     else:
         actor_critic = Policy(
             envs.observation_space.shape,
@@ -117,6 +159,8 @@ def main(args):
     episode_rewards = deque(maxlen=10)
     seeds_rewards = [0] * len(SEEDS[args.map_name])
     best_reward = -np.inf
+
+    # eval_reward = evaluate(actor_critic, eval_env, args, len(SEEDS[args.map_name]), eval_log_dir, device)
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -181,14 +225,14 @@ def main(args):
         except OSError:
             pass
 
-        min_reward = np.min(seeds_rewards) if len(seeds_rewards) > 0 else -np.inf
-        if min_reward > best_reward:
-            best_reward = min_reward
-            torch.save([
-                actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + "_best.pt"))
-            print("Best Model saved!!!, min_reward = {}".format(min_reward))
+        # min_reward = np.min(episode_rewards) if len(episode_rewards) > 0 else -np.inf
+        # if min_reward > best_reward:
+        #     best_reward = min_reward
+        #     torch.save([
+        #         actor_critic,
+        #         getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+        #     ], os.path.join(save_path, args.env_name + "_best.pt"))
+        #     print("Best Model saved!!!, min_reward = {}".format(min_reward))
             
         if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
             torch.save([
@@ -210,11 +254,17 @@ def main(args):
                         action_loss))
             writer.add_scalar('reward', np.mean(episode_rewards), total_num_steps)
 
-        if (args.eval_interval is not None and len(episode_rewards) > 1
-                and j % args.eval_interval == 0):
-            obs_rms = utils.get_vec_normalize(envs).obs_rms
-            evaluate(actor_critic, obs_rms, args.env_name, args.seed, args.num_processes, eval_log_dir, device)
-
+        if (args.eval_interval is not None and len(episode_rewards) > 1 and j % args.eval_interval == 0):
+            # obs_rms = utils.get_vec_normalize(envs).obs_rms
+            # evaluate(actor_critic, obs_rms, args.env_name, args.seed, args.num_processes, eval_log_dir, device)
+            eval_reward = evaluate(actor_critic, eval_envs, args, len(SEEDS[args.map_name]), eval_log_dir, device)
+            if eval_reward > best_reward:
+                best_reward = eval_reward
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+                ], os.path.join(save_path, args.env_name + "_best.pt"))
+                print("Best Model saved!!!, min_reward = {}".format(eval_reward))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -241,8 +291,8 @@ if __name__ == "__main__":
     parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
     parser.add_argument('--log-interval', type=int, default=10, help='log interval, one log per n updates (default: 10)')
     parser.add_argument('--save-interval', type=int, default=100, help='save interval, one save per n updates (default: 100)')
-    parser.add_argument('--eval-interval', type=int, default=None, help='eval interval, one eval per n updates (default: None)')
-    parser.add_argument('--num-env-steps', type=int, default=5e6, help='number of environment steps to train (default: 10e6)')
+    parser.add_argument('--eval-interval', type=int, default=20, help='eval interval, one eval per n updates (default: None)')
+    parser.add_argument('--num-env-steps', type=int, default=3e6, help='number of environment steps to train (default: 10e6)')
     parser.add_argument('--env-name', default='duckietown', help='environment to train on (default: PongNoFrameskip-v4)')
     parser.add_argument('--log-dir', default='./reinforcement/pytorch/log/', help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--save-dir', default='./reinforcement/pytorch/trained_models/', help='directory to save agent logs (default: ./trained_models/)')
