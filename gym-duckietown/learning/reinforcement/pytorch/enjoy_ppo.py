@@ -24,18 +24,10 @@ SEEDS = {
 
 HARD_SEEDS = {
     "map1": [],
-    "map2": [1, 2, 3, 7, 13],
+    "map2": [2],
     "map3": [8],
     "map4": [2, 4, 7],
     "map5": [2, 8, 9, 16]
-}
-
-HARD_SEEDS_2 = {
-    "map1": [],
-    "map2": [2],
-    "map3": [8, 15],
-    "map4": [2, 4, 7],
-    "map5": []
 }
 
 parser = argparse.ArgumentParser(description='RL')
@@ -66,7 +58,7 @@ args.det = not args.non_det
 # device = torch.device("cuda:0" if args.cuda else "cpu")
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v3.pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + ".pt"), map_location="cpu")
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)

@@ -24,10 +24,10 @@ SEEDS = {
     "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
-MEAN_X = 0.27
-MEAN_Y = 0.17
-STD_X = 0.02
-STD_Y = 0.03
+MEAN_X = -0.01
+MEAN_Y = -0.01
+STD_X = 0.20
+STD_Y = 0.17
 NUM_PARTICLES = 100
 NUM_RANDOM_PARTICLES = 10
 CLAMP_SPEED_DIST = 0.35 # allow some error
@@ -40,13 +40,13 @@ parser.add_argument('--max_steps', type=int, default=1500, help='max_steps')
 
 # You should set them to different map name and seed accordingly
 parser.add_argument('--map-name', default='map5')
-parser.add_argument('--seed', type=int, default=4, help='random seed')
+parser.add_argument('--seed', type=int, default=1, help='random seed')
 parser.add_argument('--load-dir', default='./model/')
 
 args = parser.parse_args()
 
 # please remove this line for your own policy
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_v3.pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + ".pt"), map_location="cpu")
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 

@@ -13,14 +13,13 @@ LIMIT = 1.0
 FRAMERATE = 30
 ROBOT_SPEED = 1.2
 
-MEAN_X = 0.27
-STD_X = 0.02
-MEAN_Y = 0.17
-STD_Y = 0.03
+# MEAN_X = 0.27
+STD_X = 0.20
+# MEAN_Y = 0.17
+STD_Y = 0.17
 
 norm_x = norm(loc = 0, scale=STD_X)
 norm_y = norm(loc = 0, scale=STD_Y)
-
 
 def get_transformation_matrix(x, y, theta):
     rot = R.from_euler('z', theta)

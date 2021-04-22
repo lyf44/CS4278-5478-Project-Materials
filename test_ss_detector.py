@@ -5,6 +5,7 @@ import torch
 import os
 import sys
 import cv2
+import scipy
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import pickle
@@ -32,21 +33,24 @@ args = parser.parse_args()
 SEEDS = {
     "map1": [2, 3, 5, 9, 12],
     "map2": [1, 2, 3, 5, 7, 8, 13, 16],
-    "map3": [1, 2, 4, 8, 9, 10, 15, 21],
-    "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
+    "map3": [1, 2, 4, 9, 10, 15, 21], # 8
+    "map4": [1, 3, 5, 9, 10, 16, 18], # [2, 4, 7]
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
 
 # please remove this line for your own policy
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_v3.pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + ".pt"), map_location="cpu")
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 
 error = []
-for i in range(1):
+gt = []
+for i in range(len(SEEDS[args.map_name])):
+# for i in range(1):
+    print("Collecting error information on {} seed {}".format(args.map_name, SEEDS[args.map_name][i]))
     rl_env = make_vec_envs(
         args.map_name,
-        [args.seed],
+        [SEEDS[args.map_name][i]],
         1,
         None,
         None,
@@ -60,7 +64,7 @@ for i in range(1):
         domain_rand = False,
         draw_bbox = False,
         max_steps = args.max_steps,
-        seed = args.seed
+        seed = SEEDS[args.map_name][i]
     )
     obs = env.reset()
 
@@ -81,10 +85,11 @@ for i in range(1):
         pos1 = ss_detector.detect_stopsign(obs)
         if pos1 is not None:
             pos2 = ss_detector.detect_stopsign_gt(env, pos1)
-            if pos2[0] < 1.0:
+            if pos2[0] < 1.2:
                 cur_err = (np.array(pos2) - np.array(pos1))[:2]
                 print(cur_err)
                 error.append(cur_err)
+                gt.append(np.array(pos2)[:2])
 
         # rl_action[0][0] = 0.15
         # print(rl_action)
@@ -111,15 +116,22 @@ for i in range(1):
     env.close()
 
 error = np.array(error).reshape(-1, 2)
-file_name = "error_{}.npy".format(args.map_name)
+print(error.shape)
+gt = np.array(gt).reshape(-1, 2)
+file_name = "error_{}.npz".format(args.map_name)
 with open(file_name, 'wb') as f:
-    np.save(f, error)
+    np.savez(f, error=error, gt=gt)
+
+# file_name = "error_{}.npz".format(args.map_name)
+# data = np.load(file_name)
+# error = data["error"]
 
 mu, std = norm.fit(error[:, 0])
 
 xmin, xmax = plt.xlim()
-x = np.linspace(xmin, xmax, 100)
+x = np.linspace(-1, 1, 100)
 p = norm.pdf(x, mu, std)
+plt.hist(error[:, 0], density=True, histtype='stepfilled', alpha=0.2)
 plt.plot(x, p, 'k', linewidth=2)
 title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
 plt.title(title)
@@ -129,10 +141,29 @@ plt.show()
 mu, std = norm.fit(error[:, 1])
 
 xmin, xmax = plt.xlim()
-x = np.linspace(xmin, xmax, 100)
+x = np.linspace(-1, 1, 100)
 p = norm.pdf(x, mu, std)
 plt.plot(x, p, 'k', linewidth=2)
+plt.hist(error[:, 1], density=True, histtype='stepfilled', alpha=0.2)
 title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
 plt.title(title)
 print(title)
 plt.show()
+
+# x = gt[:, 0]
+# y = error[:, 0]
+# res = scipy.stats.linregress(x, y)
+# plt.plot(x, y, 'o', label='original data')
+# plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+# plt.legend()
+# plt.show()
+# print("stderr ", res.stderr)
+
+# x = gt[:, 1]
+# y = error[:, 1]
+# res = scipy.stats.linregress(x, y)
+# plt.plot(x, y, 'o', label='original data')
+# plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+# plt.legend()
+# plt.show()
+# print("stderr ", res.stderr)

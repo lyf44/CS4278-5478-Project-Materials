@@ -18,7 +18,8 @@ def detect_stopsign(obs):
     '''
 
     obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.06822)
+    # tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.06822)
+    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(220.2460277141687,238.6758484095299,301.8668918355899,227.0880056118307), tag_size=0.06822)
     if len(tags) != 0:
         tmp_dist = 1000.0
         idx = None
