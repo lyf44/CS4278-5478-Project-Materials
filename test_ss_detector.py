@@ -8,7 +8,7 @@ import cv2
 import scipy
 from scipy.stats import norm
 import matplotlib.pyplot as plt
-import pickle
+import math
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "./gym-duckietown/learning/"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "./gym-duckietown/learning/reinforcement/pytorch"))
@@ -45,6 +45,7 @@ masks = torch.zeros(1, 1)
 
 error = []
 gt = []
+est = []
 for i in range(len(SEEDS[args.map_name])):
 # for i in range(1):
     print("Collecting error information on {} seed {}".format(args.map_name, SEEDS[args.map_name][i]))
@@ -65,6 +66,7 @@ for i in range(len(SEEDS[args.map_name])):
         draw_bbox = False,
         max_steps = args.max_steps,
         seed = SEEDS[args.map_name][i]
+        # seed = 23
     )
     obs = env.reset()
 
@@ -74,6 +76,7 @@ for i in range(len(SEEDS[args.map_name])):
     total_reward = 0
     step = 0
     while step <= 500:
+        # input("press")
         with torch.no_grad():
             value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks)
 
@@ -84,12 +87,15 @@ for i in range(len(SEEDS[args.map_name])):
 
         pos1 = ss_detector.detect_stopsign(obs)
         if pos1 is not None:
+            pos1[0] = pos1[0] * 3.84652 + 0.00172
+            pos1[1] = pos1[1] * 1.21 + 0.0278
             pos2 = ss_detector.detect_stopsign_gt(env, pos1)
-            if pos2[0] < 1.2:
+            if pos2 is not None and math.sqrt(pos2[0]**2 + pos2[1]**2) < 1.2 and math.sqrt(pos1[0]**2 + pos1[1]**2) < 1.2:
                 cur_err = (np.array(pos2) - np.array(pos1))[:2]
-                print(cur_err)
+                print(pos1, pos2, cur_err)
                 error.append(cur_err)
                 gt.append(np.array(pos2)[:2])
+                est.append(np.array(pos1)[:2])
 
         # rl_action[0][0] = 0.15
         # print(rl_action)
@@ -116,15 +122,17 @@ for i in range(len(SEEDS[args.map_name])):
     env.close()
 
 error = np.array(error).reshape(-1, 2)
-print(error.shape)
 gt = np.array(gt).reshape(-1, 2)
+est = np.array(est).reshape(-1, 2)
 file_name = "error_{}.npz".format(args.map_name)
 with open(file_name, 'wb') as f:
-    np.savez(f, error=error, gt=gt)
+    np.savez(f, error=error, gt=gt, est=est)
 
 # file_name = "error_{}.npz".format(args.map_name)
 # data = np.load(file_name)
 # error = data["error"]
+# gt = data["gt"]
+# est = data["est"]
 
 mu, std = norm.fit(error[:, 0])
 
@@ -150,20 +158,22 @@ plt.title(title)
 print(title)
 plt.show()
 
-# x = gt[:, 0]
-# y = error[:, 0]
-# res = scipy.stats.linregress(x, y)
-# plt.plot(x, y, 'o', label='original data')
-# plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
-# plt.legend()
-# plt.show()
-# print("stderr ", res.stderr)
+y = gt[:, 0]
+x = est[:, 0]
+res = scipy.stats.linregress(x, y)
+plt.plot(x, y, 'o', label='original data')
+plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+plt.legend()
+plt.show()
+print("stderr ", res.stderr)
+print(res.slope, res.intercept)
 
-# x = gt[:, 1]
-# y = error[:, 1]
-# res = scipy.stats.linregress(x, y)
-# plt.plot(x, y, 'o', label='original data')
-# plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
-# plt.legend()
-# plt.show()
-# print("stderr ", res.stderr)
+y = gt[:, 1]
+x = est[:, 1]
+res = scipy.stats.linregress(x, y)
+plt.plot(x, y, 'o', label='original data')
+plt.plot(x, res.intercept + res.slope*x, 'r', label='fitted line')
+plt.legend()
+plt.show()
+print("stderr ", res.stderr)
+print(res.slope, res.intercept)

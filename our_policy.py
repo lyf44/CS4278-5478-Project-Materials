@@ -24,13 +24,10 @@ SEEDS = {
     "map4": [1, 2, 3, 4, 5, 7, 9, 10, 16, 18],
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
-MEAN_X = -0.01
-MEAN_Y = -0.01
-STD_X = 0.20
-STD_Y = 0.17
+
 NUM_PARTICLES = 100
 NUM_RANDOM_PARTICLES = 10
-CLAMP_SPEED_DIST = 0.35 # allow some error
+CLAMP_SPEED_DIST = 0.37 # allow some error
 
 # declare the arguments
 parser = argparse.ArgumentParser()
@@ -87,15 +84,13 @@ while step < args.max_steps:
 
     pos_ss_r = ss_detector.detect_stopsign(obs)
     if pos_ss_r is not None:
-        pos_ss_r[0] += MEAN_X
-        # pos_ss_r[1] += MEAN_Y
+        pos_ss_r = duckietown_model.correct_ss_obs(pos_ss_r)
         dist_to_ss = math.sqrt(pos_ss_r[0] ** 2 + pos_ss_r[1] ** 2)
-
         if dist_to_ss < 1.2:
             if pf is None:
                 print("-----------Stop sign detected, start tracking!!!")
-                initial_particles_x = np.random.normal(pos_ss_r[0], STD_X, NUM_PARTICLES).reshape(-1, 1)
-                initial_particles_y = np.random.normal(pos_ss_r[1], STD_Y, NUM_PARTICLES).reshape(-1, 1)
+                initial_particles_x = np.random.normal(pos_ss_r[0], duckietown_model.STD_X, NUM_PARTICLES).reshape(-1, 1)
+                initial_particles_y = np.random.normal(pos_ss_r[1], duckietown_model.STD_Y, NUM_PARTICLES).reshape(-1, 1)
                 initial_particles = np.concatenate((initial_particles_x, initial_particles_y), axis=1)
                 print(initial_particles.shape)
                 pf = ParticleFilter(initial_particles, duckietown_model.transit_state, duckietown_model.measurement_prob)
@@ -110,10 +105,11 @@ while step < args.max_steps:
         dist_to_ss = math.sqrt(ss_pos[0] ** 2 + ss_pos[1] ** 2)
 
         gt_pos_ss = ss_detector.detect_stopsign_gt(env, ss_pos)
-        gt_dist_to_ss = math.sqrt(gt_pos_ss[0] ** 2 + gt_pos_ss[1] ** 2)
+        if gt_pos_ss is not None:
+            gt_dist_to_ss = math.sqrt(gt_pos_ss[0] ** 2 + gt_pos_ss[1] ** 2)
 
-        print("pf estimate: {}, gt: {}".format(ss_pos, gt_pos_ss))
-        print("pf estimate: {}, gt: {}".format(dist_to_ss, gt_dist_to_ss))
+            print("pf estimate: {}, gt: {}".format(ss_pos, gt_pos_ss))
+            print("pf estimate: {}, gt: {}".format(dist_to_ss, gt_dist_to_ss))
 
         # to prevent particle collapse
         random_particles_x = np.random.normal(ss_pos[0], 0.5, NUM_RANDOM_PARTICLES).reshape(-1, 1)

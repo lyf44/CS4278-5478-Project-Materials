@@ -13,10 +13,8 @@ LIMIT = 1.0
 FRAMERATE = 30
 ROBOT_SPEED = 1.2
 
-# MEAN_X = 0.27
-STD_X = 0.20
-# MEAN_Y = 0.17
-STD_Y = 0.17
+STD_X = 0.035
+STD_Y = 0.02
 
 norm_x = norm(loc = 0, scale=STD_X)
 norm_y = norm(loc = 0, scale=STD_Y)
@@ -143,3 +141,8 @@ def measurement_prob(state, observation):
     prob_x = norm_x.pdf(observation[0] - pos[0])
     prob_y = norm_y.pdf(observation[1] - pos[1])
     return prob_x * prob_y
+
+def correct_ss_obs(pos_ss):
+    pos_ss[0] = pos_ss[0] * 3.84652 + 0.00172
+    pos_ss[1] = pos_ss[1] * 1.21 + 0.0278
+    return pos_ss

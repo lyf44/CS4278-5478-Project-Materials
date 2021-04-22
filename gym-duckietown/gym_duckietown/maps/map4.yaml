@@ -75,7 +75,6 @@ objects:
   height: 0.18
   optional: true
 
-
 - kind: sign_stop
   pos: [5.08, 5.05]
   rotate: 180

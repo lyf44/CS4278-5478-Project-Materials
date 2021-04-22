@@ -52,13 +52,14 @@ parser.add_argument(
     default=False,
     help='whether to use a non-deterministic policy')
 parser.add_argument('--map-name', default="map1", help='map name')
+parser.add_argument('--hard', action='store_true', default=False)
 args = parser.parse_args()
 
-args.det = not args.non_det
-# device = torch.device("cuda:0" if args.cuda else "cpu")
+# args.det = not args.non_det
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + ".pt"), map_location="cpu")
+actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"), map_location="cpu")
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
@@ -71,6 +72,10 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
+# use hard seeds
+if args.hard:
+    SEEDS = HARD_SEEDS
+
 failed_seeds = []
 for i in range(len(SEEDS[args.map_name])):
     env = make_vec_envs(
@@ -82,10 +87,10 @@ for i in range(len(SEEDS[args.map_name])):
         device="cpu",
         allow_early_resets=False)
 
-    vec_norm = get_vec_normalize(env)
-    if vec_norm is not None:
-        vec_norm.eval()
-        vec_norm.obs_rms = obs_rms
+    # vec_norm = get_vec_normalize(env)
+    # if vec_norm is not None:
+    #     vec_norm.eval()
+    #     vec_norm.obs_rms = obs_rms
 
     # Get a render function
     # render_func = get_render_func(env)
@@ -100,7 +105,7 @@ for i in range(len(SEEDS[args.map_name])):
     while step <= 500: # 1500
         with torch.no_grad():
             value, action, _, recurrent_hidden_states = actor_critic.act(
-                obs, recurrent_hidden_states, masks, deterministic=args.det)
+                obs, recurrent_hidden_states, masks, deterministic=True)
 
         print(action)
 
