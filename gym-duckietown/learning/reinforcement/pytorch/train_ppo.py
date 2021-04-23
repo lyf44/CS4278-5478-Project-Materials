@@ -41,10 +41,10 @@ SEEDS = {
 
 HARD_SEEDS = {
     "map1": [],
-    "map2": [2],
+    "map2": [7],
     "map3": [8],
     "map4": [2], # [2, 4, 7],
-    "map5": [2, 8, 9, 16]
+    "map5": [2], # [2, 8, 9, 16]
 }
 
 def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
@@ -63,6 +63,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
 
     steps = 0
     seeds_dict = {}
+    min_step = 1500
     while len(eval_episode_rewards) < len(HARD_SEEDS[args.map_name]) and steps <= 1500:
         with torch.no_grad():
             _, action, _, eval_recurrent_hidden_states = actor_critic.act(
@@ -82,6 +83,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
             if done_:
                 info = infos[i]
                 if info['seed_val'] not in seeds_dict:
+                    min_steps = steps
                     seeds_dict[info['seed_val']] = True
                     print("seed: {}, step: {}, episode_reward: {}".format(info['seed_val'], steps, info['episode_reward']))
                     eval_episode_rewards.append(info['episode_reward'])
@@ -104,7 +106,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
     print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
         len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
 
-    return np.min(eval_episode_rewards), steps
+    return np.min(eval_episode_rewards), min_steps
 
 def main(args):
     if not os.path.exists("./results"):
@@ -138,11 +140,11 @@ def main(args):
     print("Initialized environments, device = {}".format(device))
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
     envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False,
-        hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=True)
+        hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=False)
 
     if args.load_model:
         print("loading existing models!!")
-        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo/v2/", args.env_name + "_" + args.map_name + ".pt"))
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo/", args.env_name + "_" + args.map_name + ".pt"))
     else:
         actor_critic = Policy(
             envs.observation_space.shape,
@@ -315,8 +317,8 @@ if __name__ == "__main__":
     parser.add_argument('--clip-param', type=float, default=0.2, help='ppo clip parameter (default: 0.2)')
     parser.add_argument('--log-interval', type=int, default=10, help='log interval, one log per n updates (default: 10)')
     parser.add_argument('--save-interval', type=int, default=100, help='save interval, one save per n updates (default: 100)')
-    parser.add_argument('--eval-interval', type=int, default=20, help='eval interval, one eval per n updates (default: None)')
-    parser.add_argument('--num-env-steps', type=int, default=3e6, help='number of environment steps to train (default: 10e6)')
+    parser.add_argument('--eval-interval', type=int, default=100, help='eval interval, one eval per n updates (default: None)')
+    parser.add_argument('--num-env-steps', type=int, default=5e6, help='number of environment steps to train (default: 10e6)')
     parser.add_argument('--env-name', default='duckietown', help='environment to train on (default: PongNoFrameskip-v4)')
     parser.add_argument('--log-dir', default='./reinforcement/pytorch/log/', help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--save-dir', default='./reinforcement/pytorch/trained_models/', help='directory to save agent logs (default: ./trained_models/)')
