@@ -24,10 +24,10 @@ SEEDS = {
 
 HARD_SEEDS = {
     "map1": [],
-    "map2": [2],
+    "map2": [7],
     "map3": [8],
-    "map4": [2, 4, 7],
-    "map5": [2, 8, 9, 16]
+    "map4": [4], #[4, 7].
+    "map5": [2], #[2, 8]
 }
 
 parser = argparse.ArgumentParser(description='RL')

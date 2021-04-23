@@ -64,6 +64,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
     steps = 0
     seeds_dict = {}
     min_step = 1500
+    total_reward = 0
     while len(eval_episode_rewards) < len(HARD_SEEDS[args.map_name]) and steps <= 1500:
         with torch.no_grad():
             _, action, _, eval_recurrent_hidden_states = actor_critic.act(
@@ -73,20 +74,31 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
                 deterministic=True)
 
         # Obser reward and next obs
-        obs, _, done, infos = eval_envs.step(action)
+        # obs, _, done, infos = eval_envs.step(action)
+        # eval_masks = torch.tensor(
+        #     [[0.0] if done_ else [1.0] for done_ in done],
+        #     dtype=torch.float32,
+        #     device=device)
+
+        # for i, done_ in enumerate(done):
+        #     if done_:
+        #         info = infos[i]
+        #         if info['seed_val'] not in seeds_dict:
+        #             min_steps = steps 
+        #             seeds_dict[info['seed_val']] = True
+        #             print("seed: {}, step: {}, episode_reward: {}".format(info['seed_val'], steps, info['episode_reward']))
+        #             eval_episode_rewards.append(info['episode_reward'])
+
+        obs, rewards, done, infos = eval_envs.step(action)
         eval_masks = torch.tensor(
             [[0.0] if done_ else [1.0] for done_ in done],
             dtype=torch.float32,
             device=device)
 
-        for i, done_ in enumerate(done):
-            if done_:
-                info = infos[i]
-                if info['seed_val'] not in seeds_dict:
-                    min_steps = steps 
-                    seeds_dict[info['seed_val']] = True
-                    print("seed: {}, step: {}, episode_reward: {}".format(info['seed_val'], steps, info['episode_reward']))
-                    eval_episode_rewards.append(info['episode_reward'])
+        total_reward += rewards[0].item()
+
+        if done[0]:
+            break
 
         # for info in infos:
         #     if 'episode_reward' in info.keys():
@@ -94,19 +106,22 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
 
         steps += 1
 
-    if steps >= 1500:
-        for info in infos:
-            if info['seed_val'] not in seeds_dict:
-                seeds_dict[info['seed_val']] = True
-                print("seed: {}, step: 1500, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
-                eval_episode_rewards.append(info['episode_reward'])
+    # if steps >= 1500:
+    #     for info in infos:
+    #         if info['seed_val'] not in seeds_dict:
+    #             seeds_dict[info['seed_val']] = True
+    #             print("seed: {}, step: 1500, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
+    #             eval_episode_rewards.append(info['episode_reward'])
 
     # eval_envs.close()
 
-    print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
-        len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
+    # print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
+    #     len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
 
-    return np.min(eval_episode_rewards), min_steps
+    # return np.min(eval_episode_rewards), min_steps
+
+    print(" Evaluation using 1 episodes: mean reward {:.5f}".format(total_reward))
+    return total_reward, steps
 
 def main(args):
     if not os.path.exists("./results"):
@@ -288,7 +303,7 @@ def main(args):
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
                 ], os.path.join(save_path, args.env_name + "_" + args.map_name + "_s" + str(HARD_SEEDS[args.map_name][0]) + "_best.pt"))
                 print("Best Model saved!!!, min_reward = {}".format(eval_reward))
-            if eval_reward > 10000 and steps >= 1499:
+            if eval_reward > 13000 and steps >= 1499:
                 break
             to_eval = False
 
@@ -318,7 +333,7 @@ if __name__ == "__main__":
     parser.add_argument('--log-interval', type=int, default=10, help='log interval, one log per n updates (default: 10)')
     parser.add_argument('--save-interval', type=int, default=100, help='save interval, one save per n updates (default: 100)')
     parser.add_argument('--eval-interval', type=int, default=100, help='eval interval, one eval per n updates (default: None)')
-    parser.add_argument('--num-env-steps', type=int, default=5e6, help='number of environment steps to train (default: 10e6)')
+    parser.add_argument('--num-env-steps', type=int, default=10e6, help='number of environment steps to train (default: 10e6)')
     parser.add_argument('--env-name', default='duckietown', help='environment to train on (default: PongNoFrameskip-v4)')
     parser.add_argument('--log-dir', default='./reinforcement/pytorch/log/', help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--save-dir', default='./reinforcement/pytorch/trained_models/', help='directory to save agent logs (default: ./trained_models/)')
