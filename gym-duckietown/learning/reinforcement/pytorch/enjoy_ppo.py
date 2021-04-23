@@ -32,7 +32,7 @@ HARD_SEEDS = {
 
 parser = argparse.ArgumentParser(description='RL')
 parser.add_argument(
-    '--seed', type=int, default=1, help='random seed (default: 1)')
+    '--seed', type=int, default=0, help='random seed (default: 1)')
 parser.add_argument(
     '--log-interval',
     type=int,
@@ -56,30 +56,36 @@ parser.add_argument('--hard', action='store_true', default=False)
 args = parser.parse_args()
 
 # args.det = not args.non_det
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 # We need to use the same statistics for normalization as used in training
+
+try:
+    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_s" + str(args.seed) + ".pt"), map_location="cpu")
+    print("load seed-specific model")
+except Exception as e:
+    print(e)
+    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + ".pt"), map_location="cpu")
+    print("load default model")
 # actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"), map_location="cpu")
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"))
+# actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, args.env_name + "_" + args.map_name + "_v5.pt"))
 
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 
-if args.env_name.find('Bullet') > -1:
-    import pybullet as p
-
-    torsoId = -1
-    for i in range(p.getNumBodies()):
-        if (p.getBodyInfo(i)[0].decode() == "torso"):
-            torsoId = i
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+if args.hard:
+    SEEDS = HARD_SEEDS
+if args.seed != 0:
+    seeds = [args.seed]
+else:
+    seeds = SEEDS[args.map_name]
 
 failed_seeds = []
-for i in range(len(HARD_SEEDS[args.map_name])):
+for i in range(len(seeds)):
     env = make_vec_envs(
         args.map_name,
-        [HARD_SEEDS[args.map_name][i]],
+        [seeds[i]],
         1,
         None,
         None,
@@ -116,7 +122,7 @@ for i in range(len(HARD_SEEDS[args.map_name])):
 
         if done[0]:
             print("done!!")
-            failed_seeds.append(HARD_SEEDS[args.map_name][i])
+            failed_seeds.append(seeds[i])
             break
 
         step += 1
