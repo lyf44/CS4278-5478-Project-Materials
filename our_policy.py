@@ -25,9 +25,17 @@ SEEDS = {
     "map5": [1, 2, 4, 5, 7, 8, 9, 10, 16, 23]
 }
 
+HARD_SEEDS = {
+    "map1": [],
+    "map2": [2],
+    "map3": [8],
+    "map4": [2, 4, 7],
+    "map5": [2, 8, 9, 16]
+}
+SS_TRACK_THRES = 2.0
 NUM_PARTICLES = 100
 NUM_RANDOM_PARTICLES = 10
-CLAMP_SPEED_DIST = 0.37 # allow some error
+CLAMP_SPEED_DIST = 0.3 # allow some error
 
 # declare the arguments
 parser = argparse.ArgumentParser()
@@ -39,11 +47,18 @@ parser.add_argument('--max_steps', type=int, default=1500, help='max_steps')
 parser.add_argument('--map-name', default='map5')
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 parser.add_argument('--load-dir', default='./model/')
-
+parser.add_argument('--no-render', action="store_true", default=False)
 args = parser.parse_args()
 
 # please remove this line for your own policy
-actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + ".pt"), map_location="cpu")
+try:
+    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_s" + str(args.seed) + ".pt"), map_location="cpu")
+    print("load seed-specific model")
+except Exception as e:
+    print(e)
+    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + ".pt"), map_location="cpu")
+    print("load default model")
+
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 
@@ -66,16 +81,26 @@ env = DuckietownEnv(
     seed = args.seed
 )
 obs = env.reset()
-env.render()
+
+if not args.no_render:
+    env.render()
 
 pf = None
 total_reward = 0
 rl_total_reward = 0
 step = 0
 gt_pos_ss = None
+tmp_dist_ss_pf = 0
+actions = []
 while step < args.max_steps:
     with torch.no_grad():
-        value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks)
+        value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks, deterministic=True)
+
+    rl_action[0][0] = max(min(rl_action[0][0], 0.7), 0)
+    rl_action[0][1] = max(min(rl_action[0][1], 0.875), -0.875)
+
+    # rl_action[0][0] = max(min(rl_action[0][0], 0.8), 0)
+    # rl_action[0][1] = max(min(rl_action[0][1], 1), -1)
 
     obs = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     # print(obs.shape)
@@ -83,10 +108,11 @@ while step < args.max_steps:
     # cv2.waitKey(1)
 
     pos_ss_r = ss_detector.detect_stopsign(obs)
+
     if pos_ss_r is not None:
         pos_ss_r = duckietown_model.correct_ss_obs(pos_ss_r)
         dist_to_ss = math.sqrt(pos_ss_r[0] ** 2 + pos_ss_r[1] ** 2)
-        if dist_to_ss < 1.2:
+        if dist_to_ss < SS_TRACK_THRES:
             if pf is None:
                 print("-----------Stop sign detected, start tracking!!!")
                 initial_particles_x = np.random.normal(pos_ss_r[0], duckietown_model.STD_X, NUM_PARTICLES).reshape(-1, 1)
@@ -99,6 +125,7 @@ while step < args.max_steps:
                 ss_pos = pf.get_estimate()
                 print("predict: {}, meas: {}".format(ss_pos, pos_ss_r), end=" ")
                 pf.update(pos_ss_r)
+                tmp_dist_ss_pf = math.sqrt(ss_pos[0] ** 2 + ss_pos[1] ** 2)
 
     if pf is not None:
         ss_pos = pf.get_estimate()
@@ -117,11 +144,12 @@ while step < args.max_steps:
         random_particles = np.concatenate((random_particles_x, random_particles_x), axis=1)
         pf.add_random_samples(random_particles)
 
-        if dist_to_ss <= CLAMP_SPEED_DIST:
+        if dist_to_ss <= CLAMP_SPEED_DIST + tmp_dist_ss_pf * 0.21:
             print("----------Close to stop sign, clamp speed to 0.15m/s!!!")
-            rl_action[0][0] = 0.1 # because default simulator speed is 1.2!!
+            rl_action[0][0] = max(min(rl_action[0][0], 0.1), 0)
+            rl_action[0][1] = max(min(rl_action[0][1], 0.125), -0.125)
 
-        if dist_to_ss >= 1.2:
+        if dist_to_ss >= SS_TRACK_THRES:
             print("-----------Too far from stop sign, stop tracking!!!")
             pf = None
 
@@ -129,55 +157,34 @@ while step < args.max_steps:
     masks.fill_(0.0 if done[0] else 1.0)
 
     action = rl_action[0].numpy()
-    action[0] = max(min(action[0], 0.8), 0)
-    action[1] = max(min(action[1], 1), -1)
-    # print(action)
+    # action[0] = max(min(action[0], 0.8), 0)
+    # action[1] = max(min(action[1], 1), -1)
+    print(action)
+    actions.append(action)
     obs, reward, done, info = env.step(action)
 
     rl_total_reward += rl_reward[0][0].item()
     total_reward += reward
 
+    if reward <= -100:
+        print("Didnt stop!!")
+        break
     # print('Steps = %s, Timestep Reward=%.3f, rl_total_reward=%.3f, Total Reward=%.3f' % (step, reward, rl_total_reward, total_reward))
 
     if pf is not None:
         pf.predict(action)
 
-    env.render()
+    if not args.no_render:
+        env.render()
     step += 1
 
     if done:
+        print("Done!!")
         break
 
+print("step_cnt", step)
 print("Total Reward", total_reward)
 
-# with torch.no_grad():
-#     value, action, _, recurrent_hidden_states = actor_critic.act(obs, recurrent_hidden_states, masks)
-
-
-# print(action)
-# obs, reward, done, info = env.step(action)
-# total_reward += reward
-
-# env.render()
-# step += 1
-
-# action[0][0] = 0.15
-# print(action)
-# obs, reward, done, info = env.step(action)
-# total_reward += reward
-
-# action[0][0] = 0.3
-# print(action)
-# obs, reward, done, info = env.step(action)
-# total_reward += reward
-
-# action[0][0] = 0.5
-# print(action)
-# obs, reward, done, info = env.step(action)
-# total_reward += reward
-
-# action[0][0] = 0.65
-# print(action)
-# obs, reward, done, info = env.step(action)
-# total_reward += reward
-
+# dump the controls using numpy
+actions = np.array(actions)
+np.savetxt('./control_files/{}_seed{}.txt'.format(args.map_name, args.seed), actions, delimiter=',')

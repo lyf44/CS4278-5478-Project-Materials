@@ -46,8 +46,8 @@ masks = torch.zeros(1, 1)
 error = []
 gt = []
 est = []
-for i in range(len(SEEDS[args.map_name])):
-# for i in range(1):
+# for i in range(len(SEEDS[args.map_name])):
+for i in range(1):
     print("Collecting error information on {} seed {}".format(args.map_name, SEEDS[args.map_name][i]))
     rl_env = make_vec_envs(
         args.map_name,
@@ -70,13 +70,13 @@ for i in range(len(SEEDS[args.map_name])):
     )
     obs = env.reset()
 
-    # env.render()
+    env.render()
 
     rl_total_reward = 0
     total_reward = 0
     step = 0
     while step <= 500:
-        # input("press")
+        input("press")
         with torch.no_grad():
             value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks)
 
@@ -113,7 +113,7 @@ for i in range(len(SEEDS[args.map_name])):
 
         # print('Steps = %s, Timestep Reward=%.3f, rl_total_reward=%.3f, Total Reward=%.3f' % (step, reward, rl_total_reward, total_reward))
 
-        # env.render()
+        env.render()
         step += 1
 
         if done:

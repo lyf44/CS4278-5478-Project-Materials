@@ -23,7 +23,7 @@ def detect_stopsign(obs):
     # cv2.waitKey(1)
 
     # tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(305.5718893575089,308.8338858195428,303.0797142544728,231.8845403702499), tag_size=0.035) # 0.06822
-    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(220.2460277141687,238.6758484095299,301.8668918355899,227.0880056118307), tag_size=0.035)
+    tags = at_detector.detect(obs, estimate_tag_pose=True, camera_params=(220.2460277141687,238.6758484095299,301.8668918355899,227.0880056118307), tag_size=0.035) # 0.0292
     if len(tags) != 0:
         tmp_dist = 1000.0
         idx = None
@@ -42,7 +42,7 @@ def detect_stopsign(obs):
         pos_ss_r = [t[2][0], -t[0][0], 0]
         # print(tags[idx].pose_err)
         # print(tags[idx].pose_R)
-        # print("et_pos_ss_r:", pos_ss_r) # tag's pose relative to camera
+        print("et_pos_ss_r:", pos_ss_r) # tag's pose relative to camera
 
         return pos_ss_r
     else:
