@@ -29,7 +29,7 @@ HARD_SEEDS = {
     "map1": [],
     "map2": [2],
     "map3": [8],
-    "map4": [2, 4, 7],
+    "map4": [2, 4, 7, 18],
     "map5": [2, 8, 9, 16]
 }
 SS_TRACK_THRES = 2.0
@@ -96,11 +96,11 @@ while step < args.max_steps:
     with torch.no_grad():
         value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks, deterministic=True)
 
-    rl_action[0][0] = max(min(rl_action[0][0], 0.7), 0)
-    rl_action[0][1] = max(min(rl_action[0][1], 0.875), -0.875)
+    # rl_action[0][0] = max(min(rl_action[0][0], 0.7), 0)
+    # rl_action[0][1] = max(min(rl_action[0][1], 0.875), -0.875)
 
-    # rl_action[0][0] = max(min(rl_action[0][0], 0.8), 0)
-    # rl_action[0][1] = max(min(rl_action[0][1], 1), -1)
+    rl_action[0][0] = max(min(rl_action[0][0], 0.8), 0)
+    rl_action[0][1] = max(min(rl_action[0][1], 1), -1)
 
     obs = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     # print(obs.shape)
@@ -144,7 +144,7 @@ while step < args.max_steps:
         random_particles = np.concatenate((random_particles_x, random_particles_x), axis=1)
         pf.add_random_samples(random_particles)
 
-        if dist_to_ss <= CLAMP_SPEED_DIST + tmp_dist_ss_pf * 0.21:
+        if dist_to_ss <= CLAMP_SPEED_DIST + tmp_dist_ss_pf * 0.2:
             print("----------Close to stop sign, clamp speed to 0.15m/s!!!")
             rl_action[0][0] = max(min(rl_action[0][0], 0.1), 0)
             rl_action[0][1] = max(min(rl_action[0][1], 0.125), -0.125)
@@ -186,5 +186,7 @@ print("step_cnt", step)
 print("Total Reward", total_reward)
 
 # dump the controls using numpy
-actions = np.array(actions)
-np.savetxt('./control_files/{}_seed{}.txt'.format(args.map_name, args.seed), actions, delimiter=',')
+if step >= 1500:
+    actions = np.array(actions)
+    np.savetxt('./control_files/{}_seed{}.txt'.format(args.map_name, args.seed), actions, delimiter=',')
+    print("control file saved!!")
