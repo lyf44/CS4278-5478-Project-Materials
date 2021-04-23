@@ -56,7 +56,8 @@ parser.add_argument('--hard', action='store_true', default=False)
 args = parser.parse_args()
 
 # args.det = not args.non_det
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 # We need to use the same statistics for normalization as used in training
 
@@ -114,7 +115,7 @@ for i in range(len(seeds)):
 
     total_reward = 0
     step = 0
-    while step <= 500: # 1500
+    while step <= 1500: # 1500
         with torch.no_grad():
             value, action, _, recurrent_hidden_states = actor_critic.act(
                 obs, recurrent_hidden_states, masks, deterministic=True)

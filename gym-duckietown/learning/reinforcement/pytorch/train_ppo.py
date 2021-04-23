@@ -83,7 +83,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
                 info = infos[i]
                 if info['seed_val'] not in seeds_dict:
                     seeds_dict[info['seed_val']] = True
-                    print("seed: {}, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
+                    print("seed: {}, step: {}, episode_reward: {}".format(info['seed_val'], steps, info['episode_reward']))
                     eval_episode_rewards.append(info['episode_reward'])
 
         # for info in infos:
@@ -96,7 +96,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
         for info in infos:
             if info['seed_val'] not in seeds_dict:
                 seeds_dict[info['seed_val']] = True
-                print("seed: {}, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
+                print("seed: {}, step: 1500, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
                 eval_episode_rewards.append(info['episode_reward'])
 
     # eval_envs.close()
