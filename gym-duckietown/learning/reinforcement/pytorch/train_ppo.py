@@ -43,8 +43,8 @@ HARD_SEEDS = {
     "map1": [],
     "map2": [7],
     "map3": [8],
-    "map4": [2], # [2, 4, 7],
-    "map5": [2], # [2, 8, 9, 16]
+    "map4": [4], #[4, 7].
+    "map5": [2], #[2, 8]
 }
 
 def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
@@ -83,7 +83,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
             if done_:
                 info = infos[i]
                 if info['seed_val'] not in seeds_dict:
-                    min_steps = steps
+                    min_steps = steps 
                     seeds_dict[info['seed_val']] = True
                     print("seed: {}, step: {}, episode_reward: {}".format(info['seed_val'], steps, info['episode_reward']))
                     eval_episode_rewards.append(info['episode_reward'])
@@ -144,7 +144,7 @@ def main(args):
 
     if args.load_model:
         print("loading existing models!!")
-        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo/", args.env_name + "_" + args.map_name + ".pt"))
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo/", args.env_name + "_map1.pt")) # + args.map_name
     else:
         actor_critic = Policy(
             envs.observation_space.shape,
@@ -257,7 +257,7 @@ def main(args):
             torch.save([
                 actor_critic,
                 getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + ".pt"))
+            ], os.path.join(save_path, args.env_name + "_" + args.map_name + "_s" + str(HARD_SEEDS[args.map_name][0]) + ".pt"))
             print("Model saved!!!")
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
@@ -286,9 +286,9 @@ def main(args):
                 torch.save([
                     actor_critic,
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-                ], os.path.join(save_path, args.env_name + "_best.pt"))
+                ], os.path.join(save_path, args.env_name + "_" + args.map_name + "_s" + str(HARD_SEEDS[args.map_name][0]) + "_best.pt"))
                 print("Best Model saved!!!, min_reward = {}".format(eval_reward))
-            if eval_reward > 10000 and steps >= 1500:
+            if eval_reward > 10000 and steps >= 1499:
                 break
             to_eval = False
 
