@@ -1339,6 +1339,7 @@ class Simulator(gym.Env):
         #         dist_to_stop = min(dist_to_stop, ((pos[0] - obj.pos[0]) ** 2 + (pos[2] - obj.pos[2]) ** 2) ** 0.5)
 
         # if self.speed > 0.15 and dist_to_stop < 0.3:
+        #     print("-------------------YOU DIDNT SLOW DOWN!!!------------------------")
         #     reward = -100.0
         return reward
 

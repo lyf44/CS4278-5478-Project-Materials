@@ -24,8 +24,8 @@ from .a2c_ppo_acktr.envs import make_vec_envs
 from .a2c_ppo_acktr.model import Policy
 from .a2c_ppo_acktr.storage import RolloutStorage
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter('runs/ppo')
+# from torch.utils.tensorboard import SummaryWriter
+# writer = SummaryWriter('runs/ppo')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -43,16 +43,16 @@ HARD_SEEDS = {
     "map1": [],
     "map2": [2],
     "map3": [8],
-    "map4": [2, 4, 7],
+    "map4": [2], # [2, 4, 7],
     "map5": [2, 8, 9, 16]
 }
 
-def evaluate(actor_critic, eval_envs, args, num_processes, eval_log_dir, device):
-    vec_norm = utils.get_vec_normalize(eval_envs)
-    if vec_norm is not None:
-        vec_norm.eval()
-        vec_norm.obs_rms = obs_rms
-
+def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
+    # vec_norm = utils.get_vec_normalize(eval_envs)
+    # if vec_norm is not None:
+    #     vec_norm.eval()
+    #     vec_norm.obs_rms = obs_rms
+    eval_envs = make_vec_envs(args.map_name, HARD_SEEDS[args.map_name], len(HARD_SEEDS[args.map_name]), args.gamma, eval_log_dir, device, True)
     eval_episode_rewards = []
 
     obs = eval_envs.reset()
@@ -82,11 +82,11 @@ def evaluate(actor_critic, eval_envs, args, num_processes, eval_log_dir, device)
 
         steps += 1
 
-    # eval_envs.close()sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+    # eval_envs.close()
 
     print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
         len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
-    
+
     return np.min(eval_episode_rewards)
 
 def main(args):
@@ -120,13 +120,12 @@ def main(args):
 
     print("Initialized environments, device = {}".format(device))
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
-    envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False, 
+    envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False,
         hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=True)
-    eval_envs = make_vec_envs(args.map_name, HARD_SEEDS[args.map_name], len(HARD_SEEDS[args.map_name]), args.gamma, eval_log_dir, device, True)
 
     if args.load_model:
         print("loading existing models!!")
-        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo", args.env_name + "_" + args.map_name + ".pt"))
+        actor_critic, obs_rms = torch.load(os.path.join(args.save_dir, "ppo/v2/", args.env_name + "_" + args.map_name + ".pt"))
     else:
         actor_critic = Policy(
             envs.observation_space.shape,
@@ -159,7 +158,8 @@ def main(args):
     episode_rewards = deque(maxlen=10)
     seeds_rewards = [0] * len(SEEDS[args.map_name])
     best_reward = -np.inf
-
+    best_mean_reward = -np.inf
+    to_eval = False
     # eval_reward = evaluate(actor_critic, eval_env, args, len(SEEDS[args.map_name]), eval_log_dir, device)
 
     start = time.time()
@@ -233,7 +233,7 @@ def main(args):
         #         getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
         #     ], os.path.join(save_path, args.env_name + "_best.pt"))
         #     print("Best Model saved!!!, min_reward = {}".format(min_reward))
-            
+
         if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
             torch.save([
                 actor_critic,
@@ -252,12 +252,16 @@ def main(args):
                         np.median(episode_rewards), np.min(episode_rewards),
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
-            writer.add_scalar('reward', np.mean(episode_rewards), total_num_steps)
+            # writer.add_scalar('reward', np.mean(episode_rewards), total_num_steps)
+            mean_reward = np.mean(episode_rewards)
+            if mean_reward > best_mean_reward:
+                best_mean_reward = mean_reward
+                to_eval = True
 
-        if (args.eval_interval is not None and len(episode_rewards) > 1 and j % args.eval_interval == 0):
+        if to_eval or ((args.eval_interval is not None and len(episode_rewards) > 1 and j % args.eval_interval == 0)):
             # obs_rms = utils.get_vec_normalize(envs).obs_rms
             # evaluate(actor_critic, obs_rms, args.env_name, args.seed, args.num_processes, eval_log_dir, device)
-            eval_reward = evaluate(actor_critic, eval_envs, args, len(SEEDS[args.map_name]), eval_log_dir, device)
+            eval_reward = evaluate(actor_critic, args, len(SEEDS[args.map_name]), eval_log_dir, device)
             if eval_reward > best_reward:
                 best_reward = eval_reward
                 torch.save([
@@ -273,7 +277,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='RL')
     parser.add_argument('--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument('--gail', action='store_true', default=False, help='do imitation learning with gail')
-    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 7e-4)')
+    parser.add_argument('--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
     parser.add_argument('--eps', type=float, default=1e-5, help='RMSprop optimizer epsilon (default: 1e-5)')
     parser.add_argument('--alpha', type=float, default=0.99, help='RMSprop optimizer apha (default: 0.99)')
     parser.add_argument('--gamma', type=float, default=0.99,help='discount factor for rewards (default: 0.99)')
