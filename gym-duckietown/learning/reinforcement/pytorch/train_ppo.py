@@ -52,6 +52,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
     # if vec_norm is not None:
     #     vec_norm.eval()
     #     vec_norm.obs_rms = obs_rms
+    num_processes = len(HARD_SEEDS[args.map_name])
     eval_envs = make_vec_envs(args.map_name, HARD_SEEDS[args.map_name], len(HARD_SEEDS[args.map_name]), args.gamma, eval_log_dir, device, True)
     eval_episode_rewards = []
 
@@ -61,7 +62,8 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
     eval_masks = torch.zeros(num_processes, 1, device=device)
 
     steps = 0
-    while len(eval_episode_rewards) < 10 and steps <= 1500:
+    seeds_dict = {}
+    while len(eval_episode_rewards) < len(HARD_SEEDS[args.map_name]) and steps <= 1500:
         with torch.no_grad():
             _, action, _, eval_recurrent_hidden_states = actor_critic.act(
                 obs,
@@ -76,11 +78,26 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
             dtype=torch.float32,
             device=device)
 
-        for info in infos:
-            if 'episode_reward' in info.keys():
-                eval_episode_rewards.append(info['episode_reward'])
+        for i, done_ in enumerate(done):
+            if done_:
+                info = infos[i]
+                if info['seed_val'] not in seeds_dict:
+                    seeds_dict[info['seed_val']] = True
+                    print("seed: {}, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
+                    eval_episode_rewards.append(info['episode_reward'])
+
+        # for info in infos:
+        #     if 'episode_reward' in info.keys():
+        #         eval_episode_rewards.append(info['episode_reward'])
 
         steps += 1
+
+    if steps >= 1500:
+        for info in infos:
+            if info['seed_val'] not in seeds_dict:
+                seeds_dict[info['seed_val']] = True
+                print("seed: {}, episode_reward: {}".format(info['seed_val'], info['episode_reward']))
+                eval_episode_rewards.append(info['episode_reward'])
 
     # eval_envs.close()
 
@@ -269,6 +286,9 @@ def main(args):
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
                 ], os.path.join(save_path, args.env_name + "_best.pt"))
                 print("Best Model saved!!!, min_reward = {}".format(eval_reward))
+            if eval_reward > 10000:
+                break
+            to_eval = False
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
