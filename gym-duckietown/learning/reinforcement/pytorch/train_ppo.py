@@ -104,7 +104,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
     print(" Evaluation using {} episodes: mean reward {:.5f}, min reward {:.5f}".format(
         len(eval_episode_rewards), np.mean(eval_episode_rewards), np.min(eval_episode_rewards)))
 
-    return np.min(eval_episode_rewards)
+    return np.min(eval_episode_rewards), steps
 
 def main(args):
     if not os.path.exists("./results"):
@@ -278,7 +278,7 @@ def main(args):
         if to_eval or ((args.eval_interval is not None and len(episode_rewards) > 1 and j % args.eval_interval == 0)):
             # obs_rms = utils.get_vec_normalize(envs).obs_rms
             # evaluate(actor_critic, obs_rms, args.env_name, args.seed, args.num_processes, eval_log_dir, device)
-            eval_reward = evaluate(actor_critic, args, len(SEEDS[args.map_name]), eval_log_dir, device)
+            eval_reward, steps = evaluate(actor_critic, args, len(SEEDS[args.map_name]), eval_log_dir, device)
             if eval_reward > best_reward:
                 best_reward = eval_reward
                 torch.save([
@@ -286,7 +286,7 @@ def main(args):
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
                 ], os.path.join(save_path, args.env_name + "_best.pt"))
                 print("Best Model saved!!!, min_reward = {}".format(eval_reward))
-            if eval_reward > 10000:
+            if eval_reward > 10000 and steps >= 1500:
                 break
             to_eval = False
 
