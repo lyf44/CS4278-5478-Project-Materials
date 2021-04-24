@@ -27,13 +27,13 @@ env.render()
 total_reward = 0
 
 # please remove this line for your own policy
-actions = np.loadtxt('./map5_seed11.txt', delimiter=',')
+actions = np.loadtxt('./control_files/{}_seed{}.txt'.format(args.map_name, args.seed), delimiter=',')
 
 for (speed, steering) in actions:
 
     obs, reward, done, info = env.step([speed, steering])
     total_reward += reward
-    
+
     print('Steps = %s, Timestep Reward=%.3f, Total Reward=%.3f' % (env.step_count, reward, total_reward))
 
     env.render()
@@ -41,4 +41,4 @@ for (speed, steering) in actions:
 print("Total Reward", total_reward)
 
 # dump the controls using numpy
-np.savetxt('./map5_seed11.txt', actions, delimiter=',')
+# np.savetxt('./map5_seed11.txt', actions, delimiter=',')

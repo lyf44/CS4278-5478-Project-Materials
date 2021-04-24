@@ -28,9 +28,9 @@ SEEDS = {
 HARD_SEEDS = {
     "map1": [],
     "map2": [7],
-    "map3": [8],
-    "map4": [4, 7],
-    "map5": [2, 8]
+    "map3": [],
+    "map4": [7],
+    "map5": [8]
 }
 SS_TRACK_THRES = 2.0
 NUM_PARTICLES = 100
@@ -96,11 +96,14 @@ while step < args.max_steps:
     with torch.no_grad():
         value, rl_action, _, recurrent_hidden_states = actor_critic.act(rl_obs, recurrent_hidden_states, masks, deterministic=True)
 
-    rl_action[0][0] = max(min(rl_action[0][0], 0.7), 0)
-    rl_action[0][1] = max(min(rl_action[0][1], 0.875), -0.875)
+    # if step <= 10:
+    #     rl_action[0][0] = 0
+    #     rl_action[0][1] = -1
+    # rl_action[0][0] = max(min(rl_action[0][0], 0.7), 0)
+    # rl_action[0][1] = max(min(rl_action[0][1], 0.875), -0.875)
 
-    # rl_action[0][0] = max(min(rl_action[0][0], 0.8), 0)
-    # rl_action[0][1] = max(min(rl_action[0][1], 1), -1)
+    rl_action[0][0] = max(min(rl_action[0][0], 0.8), 0)
+    rl_action[0][1] = max(min(rl_action[0][1], 1), -1)
 
     obs = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     # print(obs.shape)
@@ -144,10 +147,12 @@ while step < args.max_steps:
         random_particles = np.concatenate((random_particles_x, random_particles_x), axis=1)
         pf.add_random_samples(random_particles)
 
-        if dist_to_ss <= CLAMP_SPEED_DIST + tmp_dist_ss_pf * 0.2:
+        if dist_to_ss <= CLAMP_SPEED_DIST + tmp_dist_ss_pf * 0.6:
             print("----------Close to stop sign, clamp speed to 0.15m/s!!!")
-            rl_action[0][0] = max(min(rl_action[0][0], 0.1), 0)
-            rl_action[0][1] = max(min(rl_action[0][1], 0.1), -0.1)
+            rl_action[0][0] = max(min(rl_action[0][0], 0.08), 0)
+            rl_action[0][1] = max(min(rl_action[0][1], 0.11), -0.08)
+            # rl_action[0][0] = max(min(rl_action[0][0], 0.1), 0)
+            # rl_action[0][1] = max(min(rl_action[0][1], 0.125), -0.125)
 
         if dist_to_ss >= SS_TRACK_THRES:
             print("-----------Too far from stop sign, stop tracking!!!")
@@ -166,6 +171,12 @@ while step < args.max_steps:
     rl_total_reward += rl_reward[0][0].item()
     total_reward += reward
 
+    step += 1
+
+    if done:
+        print("Done!!")
+        break
+
     if reward <= -100:
         print("Didnt stop!!")
         break
@@ -176,11 +187,8 @@ while step < args.max_steps:
 
     if not args.no_render:
         env.render()
-    step += 1
+    # step += 1
 
-    if done:
-        print("Done!!")
-        break
 
 print("step_cnt", step)
 print("Total Reward", total_reward)
