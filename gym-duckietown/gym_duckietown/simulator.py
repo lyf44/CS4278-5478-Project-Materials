@@ -530,7 +530,7 @@ class Simulator(gym.Env):
             self.cur_pos = propose_pos
             self.cur_angle = propose_angle
 
-        print('Starting at %s %s' % (self.cur_pos, self.cur_angle))
+        # print('Starting at %s %s' % (self.cur_pos, self.cur_angle))
 
         logger.info('Starting at %s %s' % (self.cur_pos, self.cur_angle))
 
