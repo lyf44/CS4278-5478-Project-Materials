@@ -130,4 +130,5 @@ for i in range(len(seeds)):
     print(total_reward)
     env.close()
 
+print(step)
 print(failed_seeds)
