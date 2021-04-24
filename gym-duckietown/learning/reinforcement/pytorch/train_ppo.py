@@ -43,8 +43,8 @@ HARD_SEEDS = {
     "map1": [],
     "map2": [7],
     "map3": [8],
-    "map4": [4], #[4, 7].
-    "map5": [2], #[2, 8]
+    "map4": [7], #[4, 7].
+    "map5": [8], #[2, 8]
 }
 
 def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
@@ -120,7 +120,7 @@ def evaluate(actor_critic, args, num_processes, eval_log_dir, device):
 
     # return np.min(eval_episode_rewards), min_steps
 
-    print(" Evaluation using 1 episodes: mean reward {:.5f}".format(total_reward))
+    print(" Evaluation using 1 episodes: step: {}, mean reward {:.5f}".format(steps, total_reward))
     return total_reward, steps
 
 def main(args):
@@ -155,7 +155,7 @@ def main(args):
     print("Initialized environments, device = {}".format(device))
     # envs = make_vec_envs(args.map_name, args.seed, args.num_processes, args.gamma, args.log_dir, device, False)
     envs = make_vec_envs(args.map_name, SEEDS[args.map_name], args.num_processes, args.gamma, args.log_dir, device, False,
-        hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=False)
+        hard_seeds = HARD_SEEDS[args.map_name], use_hard_seed=True)
 
     if args.load_model:
         print("loading existing models!!")
@@ -303,7 +303,7 @@ def main(args):
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
                 ], os.path.join(save_path, args.env_name + "_" + args.map_name + "_s" + str(HARD_SEEDS[args.map_name][0]) + "_best.pt"))
                 print("Best Model saved!!!, min_reward = {}".format(eval_reward))
-            if eval_reward > 13000 and steps >= 1499:
+            if eval_reward > 12000 and steps >= 1499:
                 break
             to_eval = False
 

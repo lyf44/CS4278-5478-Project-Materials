@@ -27,7 +27,7 @@ HARD_SEEDS = {
     "map2": [7],
     "map3": [8],
     "map4": [4], #[4, 7].
-    "map5": [2], #[2, 8]
+    "map5": [8], #[2, 8]
 }
 
 parser = argparse.ArgumentParser(description='RL')
@@ -62,7 +62,7 @@ device = "cpu"
 # We need to use the same statistics for normalization as used in training
 
 try:
-    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_s" + str(args.seed) + ".pt"), map_location="cpu")
+    actor_critic, obs_rms = torch.load(os.path.join(args.load_dir, "duckietown_" + args.map_name + "_s" + str(args.seed) + "_best.pt"), map_location="cpu")
     print("load seed-specific model")
 except Exception as e:
     print(e)
@@ -124,12 +124,13 @@ for i in range(len(seeds)):
 
         # Obser reward and next obs
         obs, reward, done, _ = env.step(action)
+        print(reward)
         env.render()
         total_reward += reward[0][0].item()
         masks.fill_(0.0 if done else 1.0)
 
         if done[0]:
-            print("done!!")
+            print("done!!", step)
             failed_seeds.append(seeds[i])
             break
 

@@ -307,6 +307,10 @@ class Simulator(gym.Env):
             self.map_names = os.listdir('maps')
             self.map_names = [mapfile.replace('.yaml', '') for mapfile in self.map_names]
 
+        self.cnt = 0
+        self.saved_start_pos = None
+        self.saved_start_angle = None
+
         # Initialize the state
         self.reset()
 
@@ -461,12 +465,16 @@ class Simulator(gym.Env):
             if self.start_tile is not None:
                 tile = self.start_tile
             else:
+                self.cnt += 1
                 # Select a random drivable tile to start on
                 tile_idx = self.np_random.randint(0, len(self.drivable_tiles))
                 tile = self.drivable_tiles[tile_idx]
 
-        # Keep trying to find a valid spawn position on this tile
+                if self.cnt == 2:
+                    self.start_tile = tile
 
+        # Keep trying to find a valid spawn position on this tile
+        # print(tile)
 
         for _ in range(MAX_SPAWN_ATTEMPTS):
             i, j = tile['coords']
@@ -512,8 +520,17 @@ class Simulator(gym.Env):
             msg = 'Could not find a valid starting pose after %s attempts' % MAX_SPAWN_ATTEMPTS
             raise Exception(msg)
 
-        self.cur_pos = propose_pos
-        self.cur_angle = propose_angle
+        if self.saved_start_pos is not None and self.saved_start_angle is not None:
+            self.cur_pos = self.saved_start_pos
+            self.cur_angle = self.saved_start_angle
+        else:
+            if self.cnt == 2:
+                self.saved_start_pos = propose_pos
+                self.saved_start_angle = propose_angle
+            self.cur_pos = propose_pos
+            self.cur_angle = propose_angle
+
+        # print('Starting at %s %s' % (self.cur_pos, self.cur_angle))
 
         logger.info('Starting at %s %s' % (self.cur_pos, self.cur_angle))
 
